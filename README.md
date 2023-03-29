@@ -9,3 +9,6 @@ myenv\Scripts\activate
 
 install all packages
 pip install -r requirements.txt
+
+Deactivate environment
+deactivate
