@@ -10,5 +10,9 @@ myenv\Scripts\activate
 install all packages
 pip install -r requirements.txt
 
+run application
+python project.py
+
 Deactivate environment
 deactivate
+
