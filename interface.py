@@ -35,8 +35,3 @@ class Window:
         tempIN = input("hello: ")
         self.input_text.set(tempIN)
 
-
-root = Tk()
-window = Window(root)
-root.mainloop()
-
