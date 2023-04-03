@@ -1,6 +1,20 @@
-from interface import *
-from explain import *
-from pprint import pprint
+Sort 1
+Aggregate 1
+Gather Merge 1
+Aggregate 1
+Sort 1
+Nested Loop 2
+Hash Join 2     Index Scan 0
+Seq Scan 0      Hash 1
+Seq Scan 0
+
+Sort 1
+Aggregate 1
+Hash Join 2
+Hash Join 2     Hash 1
+Seq Scan 0      Hash 1  Seq Scan 0
+Seq Scan 0
+
 q1 = '''
 EXPLAIN (VERBOSE, ANALYZE, FORMAT JSON)
 select
@@ -49,21 +63,3 @@ select
       revenue desc,
       o_orderdate;
 '''
-
-connection = connect_db()
-q1_result  = execute_json(connection, q1)
-q2_result  = execute_json(connection, q2)
-# pprint(q1_result)
-q1_root = buildQEP(q1_result)
-q2_root = buildQEP(q2_result)
-
-QEP_bfs(q1_root)
-print()
-QEP_bfs(q2_root)
-
-
-
-#uncomment to see GUI interface
-# root = Tk()
-# window = Window(root)
-# root.mainloop()
