@@ -47,6 +47,9 @@ def QEP_bfs(root):
             currentLevelNodes = nextLevelNodes
             nextLevelNodes = 0
 
+# def query_difference(q1,q2):
+
+
 
 
 class Node:
