@@ -2,9 +2,10 @@ from interface import *
 from explain import *
 from pprint import pprint
 q1 = '''
+set max_parallel_workers_per_gather =0;
 EXPLAIN (VERBOSE, ANALYZE, FORMAT JSON)
 select
-      l_orderkey,
+      l_orderkey, 
       sum(l_extendedprice * (1 - l_discount)) as revenue,
       o_orderdate,
       o_shippriority
@@ -28,6 +29,7 @@ select
 '''
 
 q2 = '''
+set max_parallel_workers_per_gather =0;
 EXPLAIN (VERBOSE, ANALYZE, FORMAT JSON)
 select
       l_orderkey,
@@ -60,8 +62,9 @@ q2_root = buildQEP(q2_result)
 QEP_bfs(q1_root)
 print()
 QEP_bfs(q2_root)
-
-
+print()
+result = printSQL(q1)
+pprint(result)
 
 #uncomment to see GUI interface
 # root = Tk()
