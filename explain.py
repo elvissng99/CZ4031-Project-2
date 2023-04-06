@@ -49,11 +49,6 @@ def QEP_bfs(root):
             currentLevelNodes = nextLevelNodes
             nextLevelNodes = 0
 
-# def query_difference(q1,q2):
-
-
-
-
 class Node:
     def __init__(self,information):
         self.children = []
@@ -70,6 +65,7 @@ class Node:
 def printSQL(query):
     
     parsed = sqlparse.parse(query)[1]
+    print(parsed)
     return iterate_parsedSQL(parsed)
     
 def iterate_parsedSQL(parsed):
@@ -155,3 +151,16 @@ def reformat_WHERE_subquery(result,key):
                 result['where'].pop(k+1)
                 repeat = True
                 break
+
+def query_difference(q1,q2):
+    diff_result = {}
+    q1_set = set(q1.keys())
+    q2_set = set(q2.keys())
+    common_keys = q1_set.intersection(q2_set)
+    print("Common keys: ", common_keys)
+    for key in common_keys:
+        diff = set(q1[key]).symmetric_difference(set(q2[key]))
+        print("Diff: ", diff)
+        if diff:
+            diff_result[key] = list(diff)
+    print("Difference in q2 compared to q1 is:\n", diff_result)
