@@ -1,6 +1,8 @@
 import psycopg2
 import configparser
 from collections import deque
+import sqlparse
+
 # from pprint import pprint
 
 def connect_db():

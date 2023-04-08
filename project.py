@@ -1,6 +1,6 @@
 from interface import *
 from explain import *
-
+from pprint import pprint
 q1 = '''
 set max_parallel_workers_per_gather =0;
 EXPLAIN (VERBOSE, ANALYZE, FORMAT JSON)
@@ -21,6 +21,7 @@ group by c_name,c_mktsegment, c_acctbal, o_totalprice;
 
 connection = connect_db()
 q1_result  = execute_json(connection, q1)
+q2_result  = execute_json(connection, q2)
 q2_result  = execute_json(connection, q2)
 # pprint(q1_result)
 q1_root = buildQEP(q1_result)
