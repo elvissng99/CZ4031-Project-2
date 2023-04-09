@@ -59,17 +59,28 @@ q2_result  = execute_json(connection, q2)
 # pprint(q1_result)
 q1_root = buildQEP(q1_result)
 q2_root = buildQEP(q2_result)
-# QEP_bfs(q1_root)
-# print("boundary")
-# QEP_bfs(q2_root)
+QEP_bfs(q1_root)
+print("boundary")
+QEP_bfs(q2_root)
+
+#parse sql
+q1_parsed = parseSQL(q1)
+q2_parsed = parseSQL(q2)
+
+query_diff = query_difference(q1_parsed, q2_parsed)
+
+#find diff in qep
 seq_diff_length,seq_diff = get_path_difference(q1_root, q2_root)
-# print(seq_diff)
+print(seq_diff)
+
+
 qep_diff = difference_QEP(seq_diff)
-# pprint(qep_diff)
+pprint(qep_diff)
 qep_diff_nl = qep_diff_to_natural(qep_diff)
 for diff in qep_diff_nl:
   print(diff)
   print()
+
 
 
 #uncomment to see GUI interface
