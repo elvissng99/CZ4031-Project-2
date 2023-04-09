@@ -52,8 +52,8 @@ class Window:
         self.input_text.set(entry1)
 
 
-root = Tk()
-window = Window(root)
-root.mainloop()
+# root = Tk()
+# window = Window(root)
+# root.mainloop()
 
 
