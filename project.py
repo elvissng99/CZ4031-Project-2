@@ -59,9 +59,7 @@ q2_result  = execute_json(connection, q2)
 # pprint(q1_result)
 q1_root = buildQEP(q1_result)
 q2_root = buildQEP(q2_result)
-QEP_bfs(q1_root)
-print("boundary")
-QEP_bfs(q2_root)
+
 
 #parse sql
 q1_parsed = parseSQL(q1)
@@ -72,6 +70,13 @@ query_diff = query_difference(q1_parsed, q2_parsed)
 #find diff in qep
 seq_diff_length,seq_diff = get_path_difference(q1_root, q2_root)
 print(seq_diff)
+
+
+diag1 = graphviz.Digraph(graph_attr={'dpi':'50'})
+diag2 = graphviz.Digraph(graph_attr={'dpi':'50'})
+QEP_dfs(q1_root, "query1", diag1)
+print("boundary")
+QEP_dfs(q2_root, "query2", diag2)
 
 
 qep_diff = difference_QEP(seq_diff)
