@@ -154,13 +154,42 @@ def reformat_WHERE_subquery(result,key):
 
 def query_difference(q1,q2):
     diff_result = {}
+    final_difference_result={}
     q1_set = set(q1.keys())
     q2_set = set(q2.keys())
-    common_keys = q1_set.intersection(q2_set)
-    print("Common keys: ", common_keys)
-    for key in common_keys:
-        diff = set(q1[key]).symmetric_difference(set(q2[key]))
-        print("Diff: ", diff)
-        if diff:
-            diff_result[key] = list(diff)
+    all_keys = q1_set.union(q2_set)
+    # print("All keys: ", all_keys)
+    for key in all_keys:
+        if q1.get(key) is not None and q2.get(key) is not None: 
+            diff = set(q1[key]).symmetric_difference(set(q2[key]))
+            if diff:
+                diff_result[key] = list(diff)
+        elif q1.get(key) is None:
+            diff_result[key]=q2[key]
+        else:
+            diff_result[key]=q1[key]
     print("Difference in q2 compared to q1 is:\n", diff_result)
+    print()
+    for key, value in diff_result.items():
+        final_difference_result[key] = {}
+        final_difference_result[key]['Q1'] = []
+        final_difference_result[key]['Q2'] = []
+        if q1.get(key) is not None:
+            for element in value:
+                if element in q1[key]:
+                    # print(key, ":", element)
+                    # print("exist in q1")
+                    final_difference_result[key]['Q1'].append(element)
+                else:
+                    # print(key, ":", element)
+                    # print("exists in q2")
+                    final_difference_result[key]['Q2'].append(element)
+        else:
+            # print(key, ":", value)
+            # print("key doesn't exist in q1, exist in q2")
+            for element in value:
+                final_difference_result[key]['Q2'].append(element)
+            
+    print(final_difference_result)
+    
+    return final_difference_result
