@@ -3,12 +3,13 @@ import configparser
 from collections import deque
 import sqlparse
 import graphviz
+from pprint import pprint
 
-# from pprint import pprint
 class Node:
     def __init__(self,information, parent=None):
         self.parent = parent
         self.index = None
+        self.reasons = []
         self.children = []
         self.node_type = information['Node Type']
         del information['Node Type']
@@ -45,7 +46,7 @@ def execute_json(connection, query):
 def buildQEP(query_result_json):
     return Node(query_result_json)
 
-def QEP_dfs(root):
+def QEP_dfs(root,name,d):
     q = deque()
     cur = root
     q.append(cur)
@@ -57,6 +58,26 @@ def QEP_dfs(root):
             QEP_dfs(child, name, d)
         d.node(str(node.index), label = node.node_type)
     d.render(name, format="png")
+
+def QEP_bfs(root):
+    q = deque()
+    cur = root
+    q.append(cur)
+    currentLevelNodes = 1
+    nextLevelNodes = 0
+
+    while(len(q) > 0):
+        node = q.popleft()
+        currentLevelNodes -= 1
+        print(node.node_type,len(node.children),end ="\t")
+        for child in node.children:
+            q.append(child)
+            nextLevelNodes+=1
+        if(currentLevelNodes==0):
+            print()
+            currentLevelNodes = nextLevelNodes
+            nextLevelNodes = 0
+
 
 def parseSQL(query):
     parsed = sqlparse.parse(query)[1]
@@ -149,17 +170,45 @@ def reformat_WHERE_subquery(result,key):
 
 def query_difference(q1,q2):
     diff_result = {}
+    final_difference_result={}
     q1_set = set(q1.keys())
     q2_set = set(q2.keys())
-    common_keys = q1_set.intersection(q2_set)
-    print("Common keys: ", common_keys)
-    for key in common_keys:
-        diff = set(q1[key]).symmetric_difference(set(q2[key]))
-        # print("Diff: ", diff)
-        if diff:
-            diff_result[key] = list(diff)
-    print("Difference in q2 compared to q1 is:\n", diff_result)
-    return diff_result
+    all_keys = q1_set.union(q2_set)
+    # print("All keys: ", all_keys)
+    for key in all_keys:
+        if q1.get(key) is not None and q2.get(key) is not None: 
+            diff = set(q1[key]).symmetric_difference(set(q2[key]))
+            if diff:
+                diff_result[key] = list(diff)
+        elif q1.get(key) is None:
+            diff_result[key]=q2[key]
+        else:
+            diff_result[key]=q1[key]
+    # print("Difference in q2 compared to q1 is:\n", diff_result)
+    # print()
+    for key, value in diff_result.items():
+        final_difference_result[key] = {}
+        final_difference_result[key]['Q1'] = []
+        final_difference_result[key]['Q2'] = []
+        if q1.get(key) is not None:
+            for element in value:
+                if element in q1[key]:
+                    # print(key, ":", element)
+                    # print("exist in q1")
+                    final_difference_result[key]['Q1'].append(element)
+                else:
+                    # print(key, ":", element)
+                    # print("exists in q2")
+                    final_difference_result[key]['Q2'].append(element)
+        else:
+            # print(key, ":", value)
+            # print("key doesn't exist in q1, exist in q2")
+            for element in value:
+                final_difference_result[key]['Q2'].append(element)
+            
+    # print(final_difference_result)
+    
+    return final_difference_result
 
 # algo from here onwards
 def initialize_index(node, index):
@@ -227,7 +276,7 @@ def tree_edit_distance(tree1, tree2):
     tree2.children.sort(key=lambda x: (x.node_type, x.index))
 
     # if the nodes have same index and type, matching nodes
-    if tree1.index == tree2.index and tree1.node_type == tree2.node_type:
+    if tree1.node_type == tree2.node_type:
         cost = 0
         path = [["Matched", str(tree1.node_type), str(tree1.index),"to",str(tree2.node_type),str(tree2.index),tree1,tree2]]
     # update nodes
@@ -265,75 +314,85 @@ def tree_edit_distance(tree1, tree2):
     # add the minimum cost and the corresponding path to the overall cost and path
     cost += min_cost
     path.extend(min_path)
-
     return cost, path
 
 
 def get_path_difference(tree1, tree2):
     initialize_index(tree1, 0)
     initialize_index(tree2, 0)
-    seq_diff = tree_edit_distance(tree1, tree2)
-    return seq_diff
+    qep_diff_length,qep_diff = tree_edit_distance(tree1, tree2)
+    qep_diff.reverse()
+    return qep_diff_length,qep_diff
 
-def difference_QEP(seq_diff):
-    diffs = {
-        'delete':[],
-        'insert':[],
-        'update':[]
-    }
-    for diff in seq_diff:
+def diff_to_natural_language(qep_diff,query_diff):
+    # diffs = {
+    #     'delete':[],
+    #     'insert':[],
+    #     'update':[]
+    # }
+    result = []
+    for diff in qep_diff:
+        print(diff)
         if "Matched" not in diff:
             if "Update" in diff:
-                diffs['update'].append([diff[6],diff[7]])
+                link = qep_diff_link_to_query_diff(diff[6],query_diff)
+                pprint(link)
+                result.append(diff[6].node_type + " with output " + str(diff[6].information['Output']) + " changed to "+ diff[7].node_type + " with output " + str(diff[7].information['Output']) + " due to changes in ___")
+                # diffs['update'].append([diff[6],diff[7]])
             elif "Delete" in diff:
-                diffs['delete'].append(diff[3])
+                link = qep_diff_link_to_query_diff(diff[3],query_diff)
+                pprint(link)
+                result.append(diff[3].node_type + " with output " + str(diff[3].information['Output']) +  " was removed due to changes in ___")
+                # diffs['delete'].append(diff[3])
             elif "Insert" in diff:
-                diffs['insert'].append(diff[3])
+                link = qep_diff_link_to_query_diff(diff[3],query_diff)
+                pprint(link)
+                result.append(diff[3].node_type + " with output " + str(diff[3].information['Output']) + " was added due to changes in ___")
+                # diffs['insert'].append(diff[3])
             else:
                 print("SHOULD NOT HAPPEN")
-
-    #update
-    #check that, if update a to b, then update b to a, remove because its the same thing
-    to_be_deleted = []
-    for i in range(len(diffs['update'])):
-        node_pair1 = diffs['update'][i]
-        for j in range(i+1,len(diffs['update'])):
-            node_pair2 = diffs['update'][j]
-            if(node_pair1 != node_pair2 and compare_nodes(node_pair1[0], node_pair2[1]) and compare_nodes(node_pair1[1], node_pair2[0])):
-                to_be_deleted.append(node_pair1)
-                to_be_deleted.append(node_pair2)
-                break
-    
-    if(len(to_be_deleted)>0):
-        for node_pair in to_be_deleted:
-            diffs['update'].remove(node_pair)
-    to_be_deleted = []
-    #check for delete and insert if delete a, then insert a, remvoe because its the same thing
-    for node1 in diffs['delete']:
-        for node2 in diffs['insert']:
-            if(compare_nodes(node1, node2)):
-                to_be_deleted.append(node1)
-                to_be_deleted.append(node2)
-    if(len(to_be_deleted)>0):
-        for node in to_be_deleted:
-            if(node in diffs['delete']):
-                diffs['delete'].remove(node)
-            elif(node in diffs['insert']):
-                diffs['insert'].remove(node)
-    return diffs
-
-def compare_nodes(node1,node2):
-    if (node1.node_type == node2.node_type and set(node1.information['Output']) == set(node2.information['Output'])):
-        return True
-    else:
-        return False
-
-def qep_diff_to_natural(qep_diff):
-    result = []
-    for diff in qep_diff['update']:
-        result.append(diff[0].node_type + " with output " + str(diff[0].information['Output']) + " changed to "+ diff[1].node_type + " with output " + str(diff[1].information['Output']) + " due to changes in ___")
-    for diff in qep_diff['delete']:
-        result.append(diff.node_type + " with output " + str(diff.information['Output']) +  " was removed due to changes in ___")
-    for diff in qep_diff['insert']:
-        result.append(diff.node_type + " with output " + str(diff.information['Output']) + " was added due to changes in ___")
+        else:
+            for child in diff[6].children:
+                diff[6].reasons.extend(child.reasons)
     return result
+
+def qep_diff_link_to_query_diff(diff,query_diff):
+    result = {}
+    if diff.node_type == "Sort":
+        #check for orderby differences
+        pass
+    if diff.node_type == "Aggregate" or diff.node_type == "Group":
+        #check for select and group by differences
+        pass
+
+    #code from here onwards should link qep differences to the HAVING and WHERE clause differences
+    if len(diff.children) !=0:
+        for child in diff.children:
+            if len(child.reasons)>0:
+                diff.reasons.extend(child.reasons)
+                if 'previous' not in result:
+                    result['previous'] = []
+                result['previous'].extend(child.reasons)
+    if 'previous' not in result:
+        for keyword, differences_q1q2_dict in query_diff.items():
+            for attribute1 in diff.information['Output']:
+                filtered = attribute1[attribute1.index('.')+1:]
+                for attribute2 in differences_q1q2_dict['Q1']:
+                    if filtered in attribute2:
+                        print("filtered",filtered)
+                        if keyword not in result:
+                            result[keyword] = {'Q1':[],'Q2':[]}
+                            diff.reasons.append(keyword)
+                        if attribute2 not in result[keyword]['Q1']:
+                            result[keyword]['Q1'].append(attribute2)
+
+                for attribute2 in differences_q1q2_dict['Q2']:
+                    if filtered in attribute2:
+                        print("filtered",filtered)
+                        if keyword not in result:
+                            result[keyword] = {'Q1':[],'Q2':[]}
+                            diff.reasons.append(keyword)
+                        if attribute2 not in result[keyword]['Q2']:
+                            result[keyword]['Q2'].append(attribute2)
+    return result  
+        
