@@ -2,10 +2,12 @@ import psycopg2
 import configparser
 from collections import deque
 import sqlparse
+import graphviz
 
 # from pprint import pprint
 class Node:
-    def __init__(self,information):
+    def __init__(self,information, parent=None):
+        self.parent = parent
         self.index = None
         self.children = []
         self.node_type = information['Node Type']
@@ -15,7 +17,7 @@ class Node:
             plans = information['Plans']
             del information['Plans']
             for plan in plans:
-                child = Node(plan)
+                child = Node(plan, self)
                 self.children.append(child)
 
 def connect_db():
@@ -43,24 +45,18 @@ def execute_json(connection, query):
 def buildQEP(query_result_json):
     return Node(query_result_json)
 
-def QEP_bfs(root):
+def QEP_dfs(root):
     q = deque()
     cur = root
     q.append(cur)
-    currentLevelNodes = 1
-    nextLevelNodes = 0
-
     while(len(q) > 0):
         node = q.popleft()
-        currentLevelNodes -= 1
-        print(node.node_type,len(node.children),end ="\t")
+        if node.parent is not None:
+            d.edge(str(node.parent.index), str(node.index))
         for child in node.children:
-            q.append(child)
-            nextLevelNodes+=1
-        if(currentLevelNodes==0):
-            print()
-            currentLevelNodes = nextLevelNodes
-            nextLevelNodes = 0
+            QEP_dfs(child, name, d)
+        d.node(str(node.index), label = node.node_type)
+    d.render(name, format="png")
 
 def parseSQL(query):
     parsed = sqlparse.parse(query)[1]
