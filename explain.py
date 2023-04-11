@@ -325,61 +325,110 @@ def get_path_difference(tree1, tree2):
     return qep_diff_length,qep_diff
 
 def diff_to_natural_language(qep_diff,query_diff):
-    # diffs = {
-    #     'delete':[],
-    #     'insert':[],
-    #     'update':[]
-    # }
     result = []
     for diff in qep_diff:
-        print(diff)
         if "Matched" not in diff:
             if "Update" in diff:
                 link = qep_diff_link_to_query_diff(diff[6],query_diff)
-                pprint(link)
-                result.append(diff[6].node_type + " with output " + str(diff[6].information['Output']) + " changed to "+ diff[7].node_type + " with output " + str(diff[7].information['Output']) + " due to changes in ___")
-                # diffs['update'].append([diff[6],diff[7]])
+                diff_string = diff[6].node_type + " with output " + str(diff[6].information['Output']) + " changed to "+ diff[7].node_type + " with output " + str(diff[7].information['Output'])
+                # pprint(link)
             elif "Delete" in diff:
                 link = qep_diff_link_to_query_diff(diff[3],query_diff)
-                pprint(link)
-                result.append(diff[3].node_type + " with output " + str(diff[3].information['Output']) +  " was removed due to changes in ___")
-                # diffs['delete'].append(diff[3])
+                # pprint(link)
+                diff_string = diff[3].node_type + " with output " + str(diff[3].information['Output']) +  " was removed."
             elif "Insert" in diff:
                 link = qep_diff_link_to_query_diff(diff[3],query_diff)
-                pprint(link)
-                result.append(diff[3].node_type + " with output " + str(diff[3].information['Output']) + " was added due to changes in ___")
-                # diffs['insert'].append(diff[3])
+                # pprint(link)
+                diff_string = diff[3].node_type + " with output " + str(diff[3].information['Output']) + " was added."
             else:
                 print("SHOULD NOT HAPPEN")
+            if 'previous' in link:
+                diff_string += "The change is possibly influenced by the child nodes where there were relevant changes in the "
+                for i in range(len(link['previous'])):
+                    diff_string += link['previous'][i].upper()
+                    if i != (len(link['previous']) -1):
+                        diff_string += ', '
+                diff_string += " clauses."
+            
+            if(diff_string[-8::] == 'clauses.' and len(link) > 1):
+                diff_string += "Additionally, there were relevant changes found in the following clauses."
+            elif diff_string[-8::] != 'clauses.' and len(link) > 0:
+                diff_string += "This is due to changes in the following clauses."
+
+
+            for key, value in link.items():
+                if key != 'previous':
+                    diff_string += " In the " + key.upper() + " clause, "
+                    if len(value['Q1'])> 0:
+                        diff_string += "query 1 had "
+                        for q1_diff in value['Q1']:
+                            diff_string += q1_diff + ", "
+                        diff_string += "while query 2 did not"
+                    if len(value['Q2'])> 0:
+                        diff_string += " and query 2 had "
+                        for q2_diff in value['Q2']:
+                            diff_string += q2_diff + ", "
+                        diff_string += "while query 1 did not"
+                    diff_string += '.'
+            result.append(diff_string)
         else:
             for child in diff[6].children:
-                diff[6].reasons.extend(child.reasons)
+                for reason in child.reasons:
+                    if reason not in diff[6].reasons:
+                        diff[6].reasons.append(reason)
     return result
 
 def qep_diff_link_to_query_diff(diff,query_diff):
     result = {}
     if diff.node_type == "Sort":
-        #check for orderby differences
-        pass
+        #check for order by differences
+        if 'order by' in query_diff:
+            result['order by'] = query_diff['order by']
+
+        
     if diff.node_type == "Aggregate" or diff.node_type == "Group":
+        aggregation_list = ['count','sum','avg','min','max','array_agg','string_agg','group_concat','rank','dense_rank','row_number']
         #check for select and group by differences
-        pass
+        for q, differences in query_diff['select'].items():
+            for difference in differences:
+                for aggregation in aggregation_list:
+                    aggregation += '('
+                    if aggregation in difference:
+                        if 'select' not in result:
+                            result['select'] = {'Q1':[],'Q2':[]}
+                            diff.reasons.append('select')
+                        if difference not in result['select'][q]:
+                            result['select'][q].append(difference)
+                        
+        for q, differences in query_diff['group by'].items():
+            for difference in differences:
+                for attribute in diff.information['Output']:
+                    filtered = attribute[attribute.index('.')+1:]
+                    if filtered in difference:
+                        if 'group by' not in result:
+                            result['group by'] = {'Q1':[],'Q2':[]}
+                            diff.reasons.append('group by')
+                        if difference not in result['group by'][q]:
+                            result['group by'][q].append(difference)
+                        
 
     #code from here onwards should link qep differences to the HAVING and WHERE clause differences
     if len(diff.children) !=0:
         for child in diff.children:
             if len(child.reasons)>0:
-                diff.reasons.extend(child.reasons)
                 if 'previous' not in result:
                     result['previous'] = []
-                result['previous'].extend(child.reasons)
+                for reason in child.reasons:
+                    if reason not in diff.reasons:
+                        diff.reasons.append(reason)
+                    if reason not in result['previous']:
+                        result['previous'].append(reason)
     if 'previous' not in result:
         for keyword, differences_q1q2_dict in query_diff.items():
             for attribute1 in diff.information['Output']:
                 filtered = attribute1[attribute1.index('.')+1:]
                 for attribute2 in differences_q1q2_dict['Q1']:
                     if filtered in attribute2:
-                        print("filtered",filtered)
                         if keyword not in result:
                             result[keyword] = {'Q1':[],'Q2':[]}
                             diff.reasons.append(keyword)
@@ -388,7 +437,6 @@ def qep_diff_link_to_query_diff(diff,query_diff):
 
                 for attribute2 in differences_q1q2_dict['Q2']:
                     if filtered in attribute2:
-                        print("filtered",filtered)
                         if keyword not in result:
                             result[keyword] = {'Q1':[],'Q2':[]}
                             diff.reasons.append(keyword)

@@ -54,6 +54,8 @@ class Window:
                  "EXPLAIN (VERBOSE, ANALYZE, FORMAT JSON)\n"
         entry1 = prefix + self.entry1.get("1.0", 'end-1c')
         entry2 = prefix + self.entry2.get("1.0", 'end-1c')
+        entry1 = entry1.lower()
+        entry2 = entry2.lower()
         connection = connect_db()
         diag1 = graphviz.Digraph(graph_attr={'dpi': '50'})
         diag2 = graphviz.Digraph(graph_attr={'dpi': '50'})
