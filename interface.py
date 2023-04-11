@@ -89,16 +89,14 @@ class Window:
         # entry1 = q1
         # entry2 = q2
         connection = connect_db()
-        diag1 = Diagram(name='', filename="query1", show=False)
-        diag2 = Diagram(name='', filename="query2", show=False)
         q1_result = execute_json(connection, entry1)
         q2_result = execute_json(connection, entry2)
         q1_root = buildQEP(q1_result)
         q2_root = buildQEP(q2_result)
         results = get_path_difference(q1_root, q2_root)
         # print(results)
-        QEP_dfs(q1_root, diag1)
-        QEP_dfs(q2_root, diag2)
+        QEP_dfs(q1_root, "query1")
+        QEP_dfs(q2_root, "query2")
         self.update_image_frame(self.frame_diagram)
         self.update_output(results, results)
 
