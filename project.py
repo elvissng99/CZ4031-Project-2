@@ -23,6 +23,8 @@ select
       l_orderkey,
       o_orderdate,
       o_shippriority
+    having
+      sum(l_extendedprice * (1 - l_discount)) > 1000
     order by
       revenue desc,
       o_orderdate;
@@ -33,7 +35,6 @@ set max_parallel_workers_per_gather =0;
 EXPLAIN (VERBOSE, ANALYZE, FORMAT JSON)
 select
       l_orderkey,
-      sum(l_extendedprice * (1 - l_discount)) as revenue,
       o_orderdate,
       o_shippriority
     from
@@ -43,12 +44,9 @@ select
     where
       c_custkey = o_custkey
       and l_orderkey = o_orderkey
-    group by
-      l_orderkey,
-      o_orderdate,
-      o_shippriority
+      and o_totalprice > 100
+
     order by
-      revenue desc,
       o_orderdate;
 '''
 
@@ -64,25 +62,24 @@ q2_root = buildQEP(q2_result)
 #parse sql
 q1_parsed = parseSQL(q1)
 q2_parsed = parseSQL(q2)
-
+#find sql query differences
 query_diff = query_difference(q1_parsed, q2_parsed)
+pprint(query_diff)
 
-#find diff in qep
-seq_diff_length,seq_diff = get_path_difference(q1_root, q2_root)
-print(seq_diff)
+#algo to find the sequential changes to convert QEP1 into QEP2
+qep_diff_length,qep_diff = get_path_difference(q1_root, q2_root)
+pprint(qep_diff)
 
-
+#output qep into image files
 diag1 = graphviz.Digraph(graph_attr={'dpi':'50'})
 diag2 = graphviz.Digraph(graph_attr={'dpi':'50'})
 QEP_dfs(q1_root, "query1", diag1)
-print("boundary")
 QEP_dfs(q2_root, "query2", diag2)
 
 
-qep_diff = difference_QEP(seq_diff)
-pprint(qep_diff)
-qep_diff_nl = qep_diff_to_natural(qep_diff)
-for diff in qep_diff_nl:
+#natural language output strings
+output = diff_to_natural_language(qep_diff,query_diff)
+for diff in output:
   print(diff)
   print()
 
