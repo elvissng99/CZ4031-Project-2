@@ -51,15 +51,15 @@ QEP_dfs(q1_root, "query1")
 QEP_dfs(q2_root, "query2")
 
 
-#natural language output strings
-for diff in query_diff_natural_language:
-  print(diff)
-  print()
+# natural language output strings
+# SQL differences
+sql_text = convert_to_text(query_diff_natural_language)
+print(sql_text)
 
-qep_diff_natural_language = diff_to_natural_language(qep_diff,query_diff)
-for diff in qep_diff_natural_language:
-  print(diff)
-  print()
+# QEP differences
+qep_diff_natural_language = diff_to_natural_language(qep_diff, query_diff)
+qep_text = convert_to_text(qep_diff_natural_language)
+print(qep_text)
 
   
 
