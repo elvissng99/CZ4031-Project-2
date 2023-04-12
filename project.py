@@ -4,50 +4,26 @@ from pprint import pprint
 q1 = '''
 set max_parallel_workers_per_gather =0;
 EXPLAIN (VERBOSE, ANALYZE, FORMAT JSON)
-select
-      l_orderkey,
-      sum(l_extendedprice * (1 - l_discount)) as revenue,
-      o_orderdate,
-      o_shippriority
-    from
-      customer,
-      orders,
-      lineitem
-    where
-      c_mktsegment = 'BUILDING'
-      and c_custkey = o_custkey
-      and l_orderkey = o_orderkey
-      and o_totalprice > 10
-      and l_extendedprice > 10
-    group by
-      l_orderkey,
-      o_orderdate,
-      o_shippriority
-    having
-      sum(l_extendedprice * (1 - l_discount)) > 1000
-    order by
-      revenue desc,
-      o_orderdate;
+select c_name, c_nationkey, c_mktsegment, c_acctbal, o_totalprice, n_name
+from customer, orders, nation
+where c_acctbal > 1000
+and o_totalprice >100000
+and customer.c_custkey = orders.o_orderkey
+and customer.c_nationkey = nation.n_nationkey
+group by c_name, c_nationkey, c_mktsegment, c_acctbal, o_totalprice, n_name;
 '''
 
 q2 = ''' 
 set max_parallel_workers_per_gather =0;
 EXPLAIN (VERBOSE, ANALYZE, FORMAT JSON)
-select
-      l_orderkey,
-      o_orderdate,
-      o_shippriority
-    from
-      customer,
-      orders,
-      lineitem
-    where
-      c_custkey = o_custkey
-      and l_orderkey = o_orderkey
-      and o_totalprice > 100
-
-    order by
-      o_orderdate;
+select c_name, c_nationkey, c_mktsegment, c_acctbal, o_totalprice, n_name, l_extendedprice
+from customer, orders, nation, lineitem
+where c_acctbal > 1000
+and o_totalprice >100000
+and customer.c_custkey = orders.o_orderkey
+and customer.c_nationkey = nation.n_nationkey
+and orders.o_orderkey = lineitem.l_orderkey
+group by c_name, c_nationkey, c_mktsegment, c_acctbal, o_totalprice, n_name, l_extendedprice;
 '''
 
 
