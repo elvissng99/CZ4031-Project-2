@@ -71,8 +71,10 @@ qep_diff_length,qep_diff = get_path_difference(q1_root, q2_root)
 pprint(qep_diff)
 
 #output qep into image files
-QEP_dfs(q1_root, "query1")
-QEP_dfs(q2_root, "query2")
+diag1 = graphviz.Digraph(graph_attr={'dpi':'50'})
+diag2 = graphviz.Digraph(graph_attr={'dpi':'50'})
+QEP_dfs(q1_root, "query1", diag1)
+QEP_dfs(q2_root, "query2", diag2)
 
 
 #natural language output strings
