@@ -40,7 +40,7 @@ q1_parsed = parseSQL(q1)
 q2_parsed = parseSQL(q2)
 #find sql query differences
 query_diff = query_difference(q1_parsed, q2_parsed)
-pprint(query_diff)
+query_diff_natural_language = sql_diff_to_natural_language(query_diff)
 
 #algo to find the sequential changes to convert QEP1 into QEP2
 qep_diff_length,qep_diff = get_path_difference(q1_root, q2_root)
@@ -54,14 +54,20 @@ QEP_dfs(q2_root, "query2", diag2)
 
 
 #natural language output strings
-output = diff_to_natural_language(qep_diff,query_diff)
-for diff in output:
+for diff in query_diff_natural_language:
   print(diff)
   print()
+
+qep_diff_natural_language = diff_to_natural_language(qep_diff,query_diff)
+for diff in qep_diff_natural_language:
+  print(diff)
+  print()
+
+  
 
 
 
 #uncomment to see GUI interface
-# root = Tk()
-# window = Window(root)
-# root.mainloop()
+root = Tk()
+window = Window(root)
+root.mainloop()

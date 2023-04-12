@@ -1,20 +1,18 @@
 digraph {
 	graph [dpi=50]
-	8 -> 7
 	7 -> 6
 	6 -> 5
 	5 -> 4
-	4 -> 1
-	1 [label="Seq Scan"]
 	4 -> 3
-	3 -> 2
-	2 [label="Seq Scan"]
-	3 [label=Hash]
-	4 [label="Hash Join"]
-	5 [label=Hash]
-	6 -> 0
-	0 [label="Seq Scan"]
-	6 [label="Hash Join"]
-	7 [label=Aggregate]
-	8 [label=Sort]
+	3 [label="Seq Scan"]
+	4 [label=Hash]
+	5 -> 2
+	2 -> 0
+	0 [label="Index Scan"]
+	2 -> 1
+	1 [label="Index Scan"]
+	2 [label="Merge Join"]
+	5 [label="Hash Join"]
+	6 [label=Sort]
+	7 [label=Group]
 }
