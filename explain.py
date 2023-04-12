@@ -2,7 +2,7 @@ import psycopg2
 import configparser
 from collections import deque
 import sqlparse
-import graphviz
+from diagrams import Diagram, Node as noode
 from pprint import pprint
 
 class Node:
@@ -46,18 +46,25 @@ def execute_json(connection, query):
 def buildQEP(query_result_json):
     return Node(query_result_json)
 
-def QEP_dfs(root,name,d):
-    q = deque()
-    cur = root
-    q.append(cur)
-    while(len(q) > 0):
-        node = q.popleft()
-        if node.parent is not None:
-            d.edge(str(node.parent.index), str(node.index))
-        for child in node.children:
-            QEP_dfs(child, name, d)
-        d.node(str(node.index), label = node.node_type)
-    d.render(name, format="png")
+def QEP_dfs(root, name):
+    diag_nodes = []
+    relations = []
+    node = root
+    for child in node.children:
+        temp_nodes, temp_relations = QEP_dfs(child, name)
+        relations.append([node.index, child.index])
+        relations.extend(temp_relations)
+        diag_nodes.extend(temp_nodes)
+    diag_nodes.append([node.node_type, node.index])
+    if node.parent is None:
+        diag_nodes.sort(key=lambda x: x[1])
+        with Diagram(name='', filename=name, show=False):
+            nodes_list = [noode(label[0]) for label in diag_nodes]
+            for relation in relations:
+                nodes_list[relation[0]] >> nodes_list[relation[1]]
+
+    return diag_nodes, relations
+
 
 def QEP_bfs(root):
     q = deque()
