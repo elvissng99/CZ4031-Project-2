@@ -79,28 +79,49 @@ class Window:
         self.textbox_qep.config(state="disabled")
         self.textbox_sql.config(state="disabled")
 
-    def run(self):
+    def get_input(self):
         prefix = "set max_parallel_workers_per_gather =0;\n" \
                  "EXPLAIN (VERBOSE, ANALYZE, FORMAT JSON)\n"
         entry1 = prefix + self.entry1.get("1.0", 'end-1c')
         entry2 = prefix + self.entry2.get("1.0", 'end-1c')
         entry1 = entry1.lower()
         entry2 = entry2.lower()
-        # entry1 = q1
-        # entry2 = q2
+        return entry1, entry2
+
+    def run(self):
+        # Get input
+        entry1, entry2 = self.get_input()
+        #entry1, entry2 = q1, q2
+
+        # Create QEP
         connection = connect_db()
-        q1_result = execute_json(connection, entry1)
-        q2_result = execute_json(connection, entry2)
-        q1_root = buildQEP(q1_result)
-        q2_root = buildQEP(q2_result)
-        results = get_path_difference(q1_root, q2_root)
-        # print(results)
+        q1_root = buildQEP(execute_json(connection, entry1))
+        q2_root = buildQEP(execute_json(connection, entry2))
+
+        # find sql query differences
+        query_diff = query_difference(parseSQL(entry1), parseSQL(entry2))
+        query_diff_natural_language = sql_diff_to_natural_language(query_diff)
+
+        # algo to find the sequential changes to convert QEP1 into QEP2
+        _, qep_diff = get_path_difference(q1_root, q2_root)
+
+        # natural language output strings
+        # SQL differences
+        sql_text = convert_to_text(query_diff_natural_language)
+        # QEP differences
+        qep_diff_natural_language = diff_to_natural_language(qep_diff, query_diff)
+        qep_text = convert_to_text(qep_diff_natural_language)
+
+        # Generate QEP images
         QEP_dfs(q1_root, "query1")
         QEP_dfs(q2_root, "query2")
+
+        # Update GUI
         self.update_image_frame(self.frame_diagram)
-        self.update_output(results, results)
+        self.update_output(sql_text, qep_text)
 
 
-# root = Tk()
-# window = Window(root)
-# root.mainloop()
+if __name__ == "__main__":
+    root = Tk()
+    window = Window(root)
+    root.mainloop()
