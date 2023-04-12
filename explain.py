@@ -458,3 +458,19 @@ def qep_diff_link_to_query_diff(diff,query_diff):
                             result[keyword]['Q2'].append(attribute2)
     return result  
         
+def sql_diff_to_natural_language(query_diff):
+    result = []          
+    for keyword,value_dict in query_diff.items():
+        diff_string = "For the " + keyword.upper() + " clause, "
+        for key,value in value_dict.items():
+            if len(value)>0:
+                diff_string_partial = ""
+                for item in value:
+                    if item != 'as':
+                        diff_string_partial += item + ", "
+                if key == 'Q1':
+                    diff_string = diff_string + "query 1 includes " + diff_string_partial + "while query 2 does not."
+                else:
+                    diff_string = diff_string + "query 2 includes " + diff_string_partial + "while query 1 does not."
+        result.append(diff_string)
+    return result
