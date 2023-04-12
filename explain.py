@@ -481,3 +481,11 @@ def sql_diff_to_natural_language(query_diff):
                     diff_string = diff_string + "query 2 includes " + diff_string_partial + "while query 1 does not."
         result.append(diff_string)
     return result
+
+
+def convert_to_text(x):
+    text = ''
+    for line in x:
+        text += line + '\n\n'
+    return text
+
