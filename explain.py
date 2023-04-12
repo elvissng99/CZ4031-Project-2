@@ -372,6 +372,8 @@ def diff_to_natural_language(qep_diff,query_diff):
                     diff_string += '.'
             result.append(diff_string)
         else:
+            print(diff[6].node_type + " with output " + str(diff[6].information['Output']) + " matched "+ diff[7].node_type + " with output " + str(diff[7].information['Output']))
+            print("\n")
             for child in diff[6].children:
                 for reason in child.reasons:
                     if reason not in diff[6].reasons:
@@ -389,27 +391,31 @@ def qep_diff_link_to_query_diff(diff,query_diff):
     if diff.node_type == "Aggregate" or diff.node_type == "Group":
         aggregation_list = ['count','sum','avg','min','max','array_agg','string_agg','group_concat','rank','dense_rank','row_number']
         #check for select and group by differences
-        for q, differences in query_diff['select'].items():
-            for difference in differences:
-                for aggregation in aggregation_list:
-                    aggregation += '('
-                    if aggregation in difference:
-                        if 'select' not in result:
-                            result['select'] = {'Q1':[],'Q2':[]}
-                            diff.reasons.append('select')
-                        if difference not in result['select'][q]:
-                            result['select'][q].append(difference)
-                        
-        for q, differences in query_diff['group by'].items():
-            for difference in differences:
-                for attribute in diff.information['Output']:
-                    filtered = attribute[attribute.index('.')+1:]
-                    if filtered in difference:
-                        if 'group by' not in result:
-                            result['group by'] = {'Q1':[],'Q2':[]}
-                            diff.reasons.append('group by')
-                        if difference not in result['group by'][q]:
-                            result['group by'][q].append(difference)
+        if 'select' in query_diff:
+            for q, differences in query_diff['select'].items():
+                for difference in differences:
+                    for aggregation in aggregation_list:
+                        aggregation += '('
+                        if aggregation in difference:
+                            if 'select' not in result:
+                                result['select'] = {'Q1':[],'Q2':[]}
+                                diff.reasons.append('select')
+                            if difference not in result['select'][q]:
+                                result['select'][q].append(difference)
+        if 'group by' in query_diff:                
+            for q, differences in query_diff['group by'].items():
+                for difference in differences:
+                    for attribute in diff.information['Output']:
+                        if '.' in attribute:
+                            filtered = attribute[attribute.index('.')+1:]
+                        else: 
+                            filtered = attribute
+                        if filtered in difference:
+                            if 'group by' not in result:
+                                result['group by'] = {'Q1':[],'Q2':[]}
+                                diff.reasons.append('group by')
+                            if difference not in result['group by'][q]:
+                                result['group by'][q].append(difference)
                         
 
     #code from here onwards should link qep differences to the HAVING and WHERE clause differences
@@ -426,7 +432,10 @@ def qep_diff_link_to_query_diff(diff,query_diff):
     if 'previous' not in result:
         for keyword, differences_q1q2_dict in query_diff.items():
             for attribute1 in diff.information['Output']:
-                filtered = attribute1[attribute1.index('.')+1:]
+                if '.' in attribute1:
+                    filtered = attribute1[attribute1.index('.')+1:]
+                else: 
+                    filtered = attribute1
                 for attribute2 in differences_q1q2_dict['Q1']:
                     if filtered in attribute2:
                         if keyword not in result:
