@@ -58,7 +58,7 @@ def QEP_dfs(root, name):
     diag_nodes.append([node.node_type, node.index])
     if node.parent is None:
         diag_nodes.sort(key=lambda x: x[1])
-        with Diagram(name='', filename=name, show=False):
+        with Diagram(name='', filename=name, show=False, direction='TB'):
             nodes_list = [noode(label[0]) for label in diag_nodes]
             for relation in relations:
                 nodes_list[relation[0]] >> nodes_list[relation[1]]
