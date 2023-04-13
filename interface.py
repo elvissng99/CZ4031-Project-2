@@ -7,7 +7,8 @@ from pprint import pprint
 
 class Window:
     def __init__(self, master):
-        test = ImageTk.PhotoImage(Image.open("test.png"))
+        self.width = master.winfo_screenwidth()
+        self.height = master.winfo_screenheight()
 
         # build entry frame
         self.frame_entry = Frame(master, background="red")
@@ -23,7 +24,7 @@ class Window:
         self.control_frame.pack(padx=10, pady=10, side=BOTTOM, expand=True, fill=BOTH)
         
         # Build and pack display text
-        self.frame3 = Frame(master, background="green", width= 1350, height= 150,)
+        self.frame3 = Frame(master, background="green", width= self.width, height= self.height/5,)
         self.sql_label = Label(self.frame3, text="SQL Differences:").pack(side=LEFT, fill=BOTH)
         self.textbox_sql = Text(self.frame3, height=50, width=50, state="disabled")
         self.textbox_sql.pack(side=LEFT, expand=True, fill=X)
@@ -43,10 +44,10 @@ class Window:
         # Build and pack images
         self.frame_diagram = Frame(master, background="red")
         self.query1_label = Label(self.frame_diagram, text="Query 1:").pack(fill=BOTH)
-        self.image_scroll1 = ScrollableImage(self.frame_diagram, image=test, scrollbarwidth=20, width=400, height=300)
+        self.image_scroll1 = ScrollableImage(self.frame_diagram, scrollbarwidth=20, width=self.width/3, height=self.height/4)
         self.image_scroll1.pack(expand=TRUE, fill=BOTH)
         self.query2_label = Label(self.frame_diagram, text="Query 2:").pack(fill=BOTH)
-        self.image_scroll2 = ScrollableImage(self.frame_diagram, image=test, scrollbarwidth=20, width=400, height=300)
+        self.image_scroll2 = ScrollableImage(self.frame_diagram, scrollbarwidth=20, width=self.width/3, height=self.height/4)
         self.image_scroll2.pack(expand=TRUE, fill=BOTH)
         self.frame_diagram.pack(padx=10, pady=10, side=RIGHT, expand=TRUE, fill=BOTH)
 
@@ -56,13 +57,13 @@ class Window:
 
     def update_image_frame(self, frame):
         self.clear_frame(frame)
-        query1 = ImageTk.PhotoImage(Image.open("query1.png"))
-        query2 = ImageTk.PhotoImage(Image.open("query2.png"))
+        query1 = ImageTk.PhotoImage(Image.open("query1.png").resize((int(self.width/1.5),int(self.height/1.5))))
+        query2 = ImageTk.PhotoImage(Image.open("query2.png").resize((int(self.width/1.5),int(self.height/1.5))))
         self.query1_label = Label(self.frame_diagram, text="Query 1:").pack(expand=True, fill=BOTH)
-        self.image_scroll1 = ScrollableImage(self.frame_diagram, image=query1, scrollbarwidth=20, width=400, height=300)
+        self.image_scroll1 = ScrollableImage(self.frame_diagram, image=query1, scrollbarwidth=20, width=self.width/3, height=self.height/4)
         self.image_scroll1.pack(expand=TRUE, fill=BOTH)
         self.query2_label = Label(self.frame_diagram, text="Query 2:").pack(expand=True, fill=BOTH)
-        self.image_scroll2 = ScrollableImage(self.frame_diagram, image=query2, scrollbarwidth=20, width=400, height=300)
+        self.image_scroll2 = ScrollableImage(self.frame_diagram, image=query2, scrollbarwidth=20, width=self.width/3, height=self.height/4)
         self.image_scroll2.pack(expand=TRUE, fill=BOTH)
 
     def update_output(self, sql, qep):
@@ -123,5 +124,6 @@ class Window:
 
 if __name__ == "__main__":
     root = Tk()
+
     window = Window(root)
     root.mainloop()
