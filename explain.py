@@ -5,6 +5,8 @@ import sqlparse
 from diagrams import Diagram, Node as noode
 from pprint import pprint
 
+
+#recursively builds itself in a depth first search manner
 class Node:
     def __init__(self,information, parent=None):
         self.parent = parent
@@ -43,9 +45,13 @@ def execute_json(connection, query):
     cursor.execute(query)
     return cursor.fetchall()[0][0][0]['Plan']
 
+
+#initialise the building of the QEP tree
 def buildQEP(query_result_json):
     return Node(query_result_json)
 
+
+#tree is drawn and then output into image.png
 def QEP_dfs(root, name):
     diag_nodes = []
     relations = []
@@ -58,14 +64,14 @@ def QEP_dfs(root, name):
     diag_nodes.append([node.node_type, node.index])
     if node.parent is None:
         diag_nodes.sort(key=lambda x: x[1])
-        with Diagram(name='', filename=name, show=False, direction='TB'):
-            nodes_list = [noode(label[0]) for label in diag_nodes]
+        with Diagram(name='', filename=name, show=False, direction='TB', node_attr={"fontsize":"25"}):
+            nodes_list = [noode(label[0],height = "0.5", width = "3",) for label in diag_nodes]
             for relation in relations:
                 nodes_list[relation[0]] >> nodes_list[relation[1]]
 
     return diag_nodes, relations
 
-
+#printing the QEP with level order traversal
 def QEP_bfs(root):
     q = deque()
     cur = root
@@ -85,7 +91,7 @@ def QEP_bfs(root):
             currentLevelNodes = nextLevelNodes
             nextLevelNodes = 0
 
-
+#parse SQL into a usable format
 def parseSQL(query):
     parsed = sqlparse.parse(query)[1]
     # print(parsed)
@@ -109,6 +115,7 @@ def iterate_parsedSQL(parsed):
                 else:
                     temp.append(e.value)
             elif (e.is_group):
+                   
                 if isinstance(e,sqlparse.sql.Identifier) or isinstance(e,sqlparse.sql.IdentifierList):
                     if(keyword == 'order by'):
                         if isinstance(e,sqlparse.sql.Identifier):
@@ -124,7 +131,25 @@ def iterate_parsedSQL(parsed):
                         # print("sub for identifier/identifierlist",sub_result)
                         temp.extend(sub_result['list'])
                 elif isinstance(e,sqlparse.sql.Comparison):
-                    temp.append(e.value)
+                    is_subquery = False
+                    for checkToken in e.tokens:
+                        if isinstance(checkToken,sqlparse.sql.Parenthesis):
+                            is_subquery = True
+
+                    if not is_subquery:
+                        temp.append(e.value)
+                    else:
+                        for checkToken in e.tokens:
+                            if isinstance(checkToken,sqlparse.sql.Parenthesis):
+                                sub_result = iterate_parsedSQL(checkToken)
+                                if(len(sub_result['list'])> 0):
+                                    temp.extend(sub_result['list'])
+                                if('select' in sub_result):
+                                    temp.append(sub_result)
+                                elif('where' in sub_result):
+                                    result['where'] = sub_result['where']
+                            elif(not checkToken.is_whitespace and checkToken.value != ","):
+                                temp.append(checkToken.value)
                     # print(2,e)
                 elif isinstance(e,sqlparse.sql.Parenthesis) or isinstance(e,sqlparse.sql.Where):
                     sub_result = iterate_parsedSQL(e)
@@ -151,30 +176,31 @@ def iterate_parsedSQL(parsed):
                     else:
                         temp.append(e.value)
                     # print(4,e)
-    if 'where' in result:
-        if 'exists' in result['where']:
-            reformat_WHERE_subquery(result,'exists')
-        elif 'in' in result['where']:
-            reformat_WHERE_subquery(result,'in')
+    # if 'where' in result:
+    #     if 'exists' in result['where']:
+    #         reformat_WHERE_subquery(result,'exists')
+    #     elif 'in' in result['where']:
+    #         reformat_WHERE_subquery(result,'in')
     return result
 
-def reformat_WHERE_subquery(result,key):
-    repeat = True
-    while(repeat):
-        repeat = False
-        for k,v in enumerate(result['where']):
-            if v == key:
-                if(result['where'][k-1] == 'not'):
-                    key = 'not '+key
-                    k -=1
-                    result['where'].pop(k) 
-                result['where'][k] = {key:result['where'][k+3]}
-                result['where'].pop(k+1)
-                result['where'].pop(k+1)
-                result['where'].pop(k+1)
-                repeat = True
-                break
+# def reformat_WHERE_subquery(result,key):
+#     repeat = True
+#     while(repeat):
+#         repeat = False
+#         for k,v in enumerate(result['where']):
+#             if v == key:
+#                 if(result['where'][k-1] == 'not'):
+#                     key = 'not '+key
+#                     k -=1
+#                     result['where'].pop(k) 
+#                 result['where'][k] = {key:result['where'][k+3]}
+#                 result['where'].pop(k+1)
+#                 result['where'].pop(k+1)
+#                 result['where'].pop(k+1)
+#                 repeat = True
+#                 break
 
+#find difference between sql queries by separing what query 1 has that query 2 does not and vice versa
 def query_difference(q1,q2):
     temp_q1={}
     temp_q2={}
@@ -211,8 +237,8 @@ def query_difference(q1,q2):
         final_difference_result[key] = {}
         if 'subquery' in key:
             subquery_from_key = key.split('_')[0]
-            print()
-            print("subquery from key: ",subquery_from_key)
+            # print()
+            # print("subquery from key: ",subquery_from_key)
             for subquery_key, subquery_value in diff_result[key].items():
                 final_difference_result[key][subquery_key] = {}
                 final_difference_result[key][subquery_key]['Q1'] = []
@@ -226,8 +252,8 @@ def query_difference(q1,q2):
                                     final_difference_result[key][subquery_key]['Q1'].append(element)
                                 else:
                                     final_difference_result[key][subquery_key]['Q2'].append(element)
-                else:
-                    print("temp_q1 is empty.")
+                # else:
+                #     print("temp_q1 is empty.")
                 if bool(temp_q2):    
                     for item in temp_q2[subquery_from_key]:
                         if isinstance(item,dict) and item.get(subquery_key) is not None:
@@ -236,8 +262,8 @@ def query_difference(q1,q2):
                                     final_difference_result[key][subquery_key]['Q2'].append(element)
                                 else:
                                     final_difference_result[key][subquery_key]['Q1'].append(element)
-                else:
-                    print("temp_q2 is empty.")
+                # else:
+                #     print("temp_q2 is empty.")
         else:
             final_difference_result[key]['Q1'] = []
             final_difference_result[key]['Q2'] = []
@@ -251,19 +277,21 @@ def query_difference(q1,q2):
                 for element in value:
                     final_difference_result[key]['Q2'].append(element)
     
-    print()
-    print("Final Difference Result:")        
-    print(final_difference_result)
+    # print()
+    # print("Final Difference Result:")        
+    # print(final_difference_result)
     
     return final_difference_result
 
+#formatting subqueries found in the query
 def get_subquery_info(query,key,temp_query):
     for value in query[key]:
         if isinstance(value,dict):
             temp_query[key] = [value]
             query['{}_subquery'.format(key)] = list(value.items())
             query[key].remove(value)
-            print(temp_query)
+            # print("subquery_info temp query")
+            # print(temp_query)
 
 # algo from here onwards
 def initialize_index(node, index):
@@ -288,6 +316,7 @@ def initialize_node_list(node):
     node_list.append(node)
     return node_list
 
+#algorithm to find sequence to transform QEP 1 into QEP 2
 def tree_edit_distance(tree1, tree2):
     """
     Parameters:
@@ -371,7 +400,7 @@ def tree_edit_distance(tree1, tree2):
     path.extend(min_path)
     return cost, path
 
-
+#returns length and the sequence of changes to transform QEP 1 to QEP 2
 def get_path_difference(tree1, tree2):
     initialize_index(tree1, 0)
     initialize_index(tree2, 0)
@@ -379,26 +408,41 @@ def get_path_difference(tree1, tree2):
     qep_diff.reverse()
     return qep_diff_length,qep_diff
 
+#helper function to form a small part of the natural language translation
+def form_output_string(diff):
+    outputstr_list = []
+    if 'Output' in diff.information:
+        for output in diff.information['Output']:
+            if '.' in output:
+                outputstr_list.append(output[output.index('.')+1:])
+            else:
+                outputstr_list.append(output)
+        outputstr = " with output " + str(outputstr_list) + "."
+    else:
+        outputstr = " with boolean output."
+    return outputstr
+
+#returns the list of strings that contains the differences in natural language
 def diff_to_natural_language(qep_diff,query_diff):
     result = []
     for diff in qep_diff:
         if "Matched" not in diff:
-            if "Update" in diff:
+            if "Update" in diff:                
                 link = qep_diff_link_to_query_diff(diff[6],query_diff)
-                diff_string = diff[6].node_type + " with output " + str(diff[6].information['Output']) + " changed to "+ diff[7].node_type + " with output " + str(diff[7].information['Output'])
+                diff_string = diff[6].node_type + form_output_string(diff[6]) + " changed to "+ diff[7].node_type + form_output_string(diff[7])
                 # pprint(link)
             elif "Delete" in diff:
                 link = qep_diff_link_to_query_diff(diff[3],query_diff)
                 # pprint(link)
-                diff_string = diff[3].node_type + " with output " + str(diff[3].information['Output']) +  " was removed."
+                diff_string = diff[3].node_type + form_output_string(diff[3]) +  " was removed."
             elif "Insert" in diff:
                 link = qep_diff_link_to_query_diff(diff[3],query_diff)
                 # pprint(link)
-                diff_string = diff[3].node_type + " with output " + str(diff[3].information['Output']) + " was added."
+                diff_string = diff[3].node_type + form_output_string(diff[3]) + " was added."
             else:
                 print("SHOULD NOT HAPPEN")
             if 'previous' in link:
-                diff_string += "The change is possibly influenced by the child nodes where there were relevant changes in the "
+                diff_string += " The change is possibly influenced by the child nodes where there were relevant changes in the "
                 for i in range(len(link['previous'])):
                     diff_string += link['previous'][i].upper()
                     if i != (len(link['previous']) -1):
@@ -406,35 +450,50 @@ def diff_to_natural_language(qep_diff,query_diff):
                 diff_string += " clauses."
             
             if(diff_string[-8::] == 'clauses.' and len(link) > 1):
-                diff_string += "Additionally, there were relevant changes found in the following clauses."
+                diff_string += " Additionally, there were relevant changes found in the following clauses."
             elif diff_string[-8::] != 'clauses.' and len(link) > 0:
-                diff_string += "This is due to changes in the following clauses."
+                diff_string += " This is due to changes in the following clauses."
+            result.append(diff_to_natural_language_recursion(diff,diff_string,link))
 
-
-            for key, value in link.items():
-                if key != 'previous':
-                    diff_string += " In the " + key.upper() + " clause, "
-                    if len(value['Q1'])> 0:
-                        diff_string += "query 1 had "
-                        for q1_diff in value['Q1']:
-                            diff_string += q1_diff + ", "
-                        diff_string += "while query 2 did not"
-                    if len(value['Q2'])> 0:
-                        diff_string += " and query 2 had "
-                        for q2_diff in value['Q2']:
-                            diff_string += q2_diff + ", "
-                        diff_string += "while query 1 did not"
-                    diff_string += '.'
-            result.append(diff_string)
         else:
-            print(diff[6].node_type + " with output " + str(diff[6].information['Output']) + " matched "+ diff[7].node_type + " with output " + str(diff[7].information['Output']))
-            print("\n")
+            # print(diff[6].node_type + " with output " + str(diff[6].information['Output']) + " matched "+ diff[7].node_type + " with output " + str(diff[7].information['Output']))
+            # print("\n")
             for child in diff[6].children:
                 for reason in child.reasons:
                     if reason not in diff[6].reasons:
                         diff[6].reasons.append(reason)
     return result
 
+#return a string that contains the differences in natural langauge for a particular node change in QEP 1 to transform into QEP 2
+def diff_to_natural_language_recursion(diff,diff_string,link):
+    for key, value in link.items():
+        if key != 'previous' and key !='list':
+            if 'subquery' not in key:
+                diff_string += " In the " + key.upper() + " clause, "
+                if len(value['Q1'])> 0:
+                    diff_string += "query 1 had "
+                    for q1_diff in value['Q1']:
+                        if q1_diff != '(' and q1_diff != ')':
+                            diff_string += q1_diff + ", "
+                    diff_string += "while query 2 did not"
+                if len(value['Q2'])> 0:
+                    diff_string += " and query 2 had "
+                    for q2_diff in value['Q2']:
+                        if q2_diff != '(' and q2_diff != ')':
+                            diff_string += q2_diff + ", "
+                    diff_string += "while query 1 did not"
+                diff_string += '.'
+            else:
+                diff_string += " In the " + key.upper()[:key.index('_')] + " clause, there is also a subquery. The relevant differences in the subquery are as follows:\n"
+                # print("partial diff string", diff_string)
+                diff_string = diff_to_natural_language_recursion(diff,diff_string,value)
+                diff_string += "\nThis concludes the differences in the subquery."
+    return diff_string
+
+
+#finds relevant links/reasons as to why there is a node change in QEP 1 to transform into QEP 2
+#this is based on either the current node's child nodes which had differences
+#or the current node's output changes in QEP 1 as compared to QEP 2
 def qep_diff_link_to_query_diff(diff,query_diff):
     result = {}
     if diff.node_type == "Sort":
@@ -472,8 +531,6 @@ def qep_diff_link_to_query_diff(diff,query_diff):
                             if difference not in result['group by'][q]:
                                 result['group by'][q].append(difference)
                         
-
-    #code from here onwards should link qep differences to the HAVING and WHERE clause differences
     if len(diff.children) !=0:
         for child in diff.children:
             if len(child.reasons)>0:
@@ -484,47 +541,73 @@ def qep_diff_link_to_query_diff(diff,query_diff):
                         diff.reasons.append(reason)
                     if reason not in result['previous']:
                         result['previous'].append(reason)
+
     if 'previous' not in result:
         for keyword, differences_q1q2_dict in query_diff.items():
-            for attribute1 in diff.information['Output']:
-                if '.' in attribute1:
-                    filtered = attribute1[attribute1.index('.')+1:]
-                else: 
-                    filtered = attribute1
-                for attribute2 in differences_q1q2_dict['Q1']:
-                    if filtered in attribute2:
-                        if keyword not in result:
-                            result[keyword] = {'Q1':[],'Q2':[]}
-                            diff.reasons.append(keyword)
-                        if attribute2 not in result[keyword]['Q1']:
-                            result[keyword]['Q1'].append(attribute2)
+            if 'list' != keyword:
+                if 'subquery' not in keyword:
+                    if 'Output' in diff.information:
+                        for attribute1 in diff.information['Output']:
+                            if '.' in attribute1:
+                                filtered = attribute1[attribute1.index('.')+1:]
+                            else: 
+                                filtered = attribute1
+                            for attribute2 in differences_q1q2_dict['Q1']:
+                                if filtered in attribute2:
+                                    if keyword not in result:
+                                        result[keyword] = {'Q1':[],'Q2':[]}
+                                        diff.reasons.append(keyword)
+                                    if attribute2 not in result[keyword]['Q1']:
+                                        result[keyword]['Q1'].append(attribute2)
 
-                for attribute2 in differences_q1q2_dict['Q2']:
-                    if filtered in attribute2:
-                        if keyword not in result:
-                            result[keyword] = {'Q1':[],'Q2':[]}
-                            diff.reasons.append(keyword)
-                        if attribute2 not in result[keyword]['Q2']:
-                            result[keyword]['Q2'].append(attribute2)
+                            for attribute2 in differences_q1q2_dict['Q2']:
+                                if filtered in attribute2:
+                                    if keyword not in result:
+                                        result[keyword] = {'Q1':[],'Q2':[]}
+                                        diff.reasons.append(keyword)
+                                    if attribute2 not in result[keyword]['Q2']:
+                                        result[keyword]['Q2'].append(attribute2)
+                    else:
+                        unique_attributes = ["not","exists","in"]
+                        for key in differences_q1q2_dict:
+                            for attribute in differences_q1q2_dict[key]:
+                                if attribute in unique_attributes:
+                                    if keyword not in result:
+                                        result[keyword] = {'Q1':[],'Q2':[]}
+                                        diff.reasons.append(keyword)
+                                    if attribute not in result[keyword][key]:
+                                        result[keyword][key].append(attribute)
+                                    
+                else:
+                    result[keyword] = differences_q1q2_dict
     return result  
-        
+
+
+#returns a list of strings that tells the natural language difference between the 2 queries
 def sql_diff_to_natural_language(query_diff):
     result = []          
     for keyword,value_dict in query_diff.items():
-        diff_string = "For the " + keyword.upper() + " clause, "
-        for key,value in value_dict.items():
-            if len(value)>0:
-                diff_string_partial = ""
-                for item in value:
-                    if item != 'as':
-                        diff_string_partial += item + ", "
-                if key == 'Q1':
-                    diff_string = diff_string + "query 1 includes " + diff_string_partial + "while query 2 does not."
-                else:
-                    diff_string = diff_string + "query 2 includes " + diff_string_partial + "while query 1 does not."
-        result.append(diff_string)
+        if keyword != 'list':
+            if 'subquery' not in keyword:
+                diff_string = "For the " + keyword.upper() + " clause, "
+                for key,value in value_dict.items():
+                    if len(value)>0:
+                        diff_string_partial = ""
+                        for item in value:
+                            if item != 'as' and item != '(' and item != ')':
+                                diff_string_partial += item + ", "
+                        if key == 'Q1':
+                            diff_string = diff_string + "query 1 included " + diff_string_partial + "while query 2 did not."
+                        else:
+                            diff_string = diff_string + "query 2 included " + diff_string_partial + "while query 1 did not."
+                result.append(diff_string)
+            else:
+                diff_string = "For the nested subquery in the " + keyword[:keyword.index('_')].upper() + " clause , the differences are as follows:"
+                result.append(diff_string)
+                result.extend(sql_diff_to_natural_language(value_dict))
+                result.append("This concludes the differences in the subquery.")
+        
     return result
-
 
 def convert_to_text(x):
     text = ''
