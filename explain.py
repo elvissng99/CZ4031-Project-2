@@ -115,6 +115,7 @@ def iterate_parsedSQL(parsed):
                 else:
                     temp.append(e.value)
             elif (e.is_group):
+                   
                 if isinstance(e,sqlparse.sql.Identifier) or isinstance(e,sqlparse.sql.IdentifierList):
                     if(keyword == 'order by'):
                         if isinstance(e,sqlparse.sql.Identifier):
@@ -130,7 +131,25 @@ def iterate_parsedSQL(parsed):
                         # print("sub for identifier/identifierlist",sub_result)
                         temp.extend(sub_result['list'])
                 elif isinstance(e,sqlparse.sql.Comparison):
-                    temp.append(e.value)
+                    is_subquery = False
+                    for checkToken in e.tokens:
+                        if isinstance(checkToken,sqlparse.sql.Parenthesis):
+                            is_subquery = True
+
+                    if not is_subquery:
+                        temp.append(e.value)
+                    else:
+                        for checkToken in e.tokens:
+                            if isinstance(checkToken,sqlparse.sql.Parenthesis):
+                                sub_result = iterate_parsedSQL(checkToken)
+                                if(len(sub_result['list'])> 0):
+                                    temp.extend(sub_result['list'])
+                                if('select' in sub_result):
+                                    temp.append(sub_result)
+                                elif('where' in sub_result):
+                                    result['where'] = sub_result['where']
+                            elif(not checkToken.is_whitespace and checkToken.value != ","):
+                                temp.append(checkToken.value)
                     # print(2,e)
                 elif isinstance(e,sqlparse.sql.Parenthesis) or isinstance(e,sqlparse.sql.Where):
                     sub_result = iterate_parsedSQL(e)
@@ -476,8 +495,6 @@ def diff_to_natural_language_recursion(diff,diff_string,link):
 #this is based on either the current node's child nodes which had differences
 #or the current node's output changes in QEP 1 as compared to QEP 2
 def qep_diff_link_to_query_diff(diff,query_diff):
-    print("DIFFFFFFF")
-    pprint(query_diff)
     result = {}
     if diff.node_type == "Sort":
         #check for order by differences
@@ -530,8 +547,6 @@ def qep_diff_link_to_query_diff(diff,query_diff):
             if 'list' != keyword:
                 if 'subquery' not in keyword:
                     if 'Output' in diff.information:
-                        #reason why exists not showing up is because u checking for exists will not be found in output
-                        #specifically should output these words like not,exists,in 
                         for attribute1 in diff.information['Output']:
                             if '.' in attribute1:
                                 filtered = attribute1[attribute1.index('.')+1:]
@@ -552,6 +567,17 @@ def qep_diff_link_to_query_diff(diff,query_diff):
                                         diff.reasons.append(keyword)
                                     if attribute2 not in result[keyword]['Q2']:
                                         result[keyword]['Q2'].append(attribute2)
+                    else:
+                        unique_attributes = ["not","exists","in"]
+                        for key in differences_q1q2_dict:
+                            for attribute in differences_q1q2_dict[key]:
+                                if attribute in unique_attributes:
+                                    if keyword not in result:
+                                        result[keyword] = {'Q1':[],'Q2':[]}
+                                        diff.reasons.append(keyword)
+                                    if attribute not in result[keyword][key]:
+                                        result[keyword][key].append(attribute)
+                                    
                 else:
                     result[keyword] = differences_q1q2_dict
     return result  
@@ -576,7 +602,7 @@ def sql_diff_to_natural_language(query_diff):
                             diff_string = diff_string + "query 2 included " + diff_string_partial + "while query 1 did not."
                 result.append(diff_string)
             else:
-                diff_string = "For the nested subquery in the " + keyword[:keyword.index('_')] + " clause , the differences are as follows:"
+                diff_string = "For the nested subquery in the " + keyword[:keyword.index('_')].upper() + " clause , the differences are as follows:"
                 result.append(diff_string)
                 result.extend(sql_diff_to_natural_language(value_dict))
                 result.append("This concludes the differences in the subquery.")
