@@ -93,7 +93,7 @@ class Window:
         entry2 = entry2.lower()
         return entry1, entry2
 
-     def run(self):
+    def run(self):
         # Check if input is empty
         if len(self.entry1.get("1.0", END)) == 1 or len(self.entry2.get("1.0", END)) == 1:
             self.update_output("Please fill in both Query 1 and Query 2", "Please fill in both Query 1 and Query 2")
