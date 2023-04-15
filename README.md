@@ -1,22 +1,21 @@
 # CZ4031-Project-2
-Natural and visual language description of changes in QEP
-
-Install the latest graphviz from https://graphviz.org/download/
-Please tick the checkbox that adds executable to PATH for current/all users during the installation
+Natural and visual language description of changes in QEP from Query 1 to Query 2
 
 
-Create virtual environment
+Installation Instructions:
+
+Create virtual environment: 
 python -m venv myenv
 
-Activate virtual environment
+Activate virtual environment: 
 myenv\Scripts\activate
 
-install all packages
+install all packages: 
 pip install -r requirements.txt
 
-run application
+run application: 
 python project.py
 
-Deactivate environment
+Deactivate environment: 
 deactivate
 

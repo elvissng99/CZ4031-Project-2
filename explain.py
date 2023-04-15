@@ -563,6 +563,7 @@ def diff_to_natural_language(qep_diff,query_diff):
                     if reason not in diff[6].reasons:
                         diff[6].reasons.append(reason)
     return result
+
 #return a string that contains the differences in natural langauge for a particular node change in QEP 1 to transform into QEP 2
 def diff_to_natural_language_recursion(diff,diff_string,link):
     for key, value in link.items():
@@ -601,7 +602,6 @@ def qep_diff_link_to_query_diff(diff,query_diff):
         #check for order by differences
         if 'order by' in query_diff:
             result['order by'] = query_diff['order by']
-
         
     if diff.node_type == "Aggregate" or diff.node_type == "Group":
         aggregation_list = ['count','sum','avg','min','max','array_agg','string_agg','group_concat','rank','dense_rank','row_number']
@@ -678,8 +678,7 @@ def qep_diff_link_to_query_diff(diff,query_diff):
                                         result[keyword] = {'Q1':[],'Q2':[]}
                                         diff.reasons.append(keyword)
                                     if attribute not in result[keyword][key]:
-                                        result[keyword][key].append(attribute)
-                                    
+                                        result[keyword][key].append(attribute)         
                 else:
                     result[keyword] = differences_q1q2_dict
     return result  
