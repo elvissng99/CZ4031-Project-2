@@ -9,7 +9,7 @@ if __name__ == "__main__":
 	
 	# Setting window attributes
 	root.title("Query Comparer")
-	root.attributes('-fullscreen', True)
+	root.state("zoomed")
 	
 	# Constructing GUI
 	window = Window(root)
