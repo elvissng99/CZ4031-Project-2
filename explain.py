@@ -2,7 +2,6 @@ import psycopg2
 import configparser
 from collections import deque
 import sqlparse
-from diagrams import Diagram, Node as noode
 from pprint import pprint
 import networkx as nx
 import matplotlib.patches as mpatches
@@ -324,7 +323,15 @@ def query_difference(q1,q2):
     # print("Updated Keys: {}".format(updated_all_keys))
     for key in updated_all_keys:
         if q1.get(key) is not None and q2.get(key) is not None:
-            diff = set(q1[key]).symmetric_difference(set(q2[key]))
+            # diff = set(q1[key]).symmetric_difference(set(q2[key]))
+            # print("key is", key)
+            # print("q1 key")
+            # pprint(q1[key])
+            # print("q2 key")
+            # pprint(q2[key])
+            diff = set(convert_lists_to_tuples(q1[key])).symmetric_difference(set(convert_lists_to_tuples(q2[key])))
+            # print("diff")
+            # print(list(diff))
             if diff:
                 diff_result[key] = list(diff)
         elif q1.get(key) is None:
@@ -338,7 +345,7 @@ def query_difference(q1,q2):
             for tup in value:
                 # print("Tuple: ", tup)
                 tuple_key = tup[0]
-                tuple_value = tup[1] if isinstance(tup[1], list) else [tup[1]]
+                tuple_value = list(tup[1])
                 if tuple_key not in new_subquery_format[key]:
                     new_subquery_format[key][tuple_key] = tuple_value
                 else:
@@ -407,6 +414,14 @@ def get_subquery_info(query,key,temp_query):
             # print()
             # print("Temp: {}".format(temp_query[key]))
             # print()
+
+def convert_lists_to_tuples(obj):
+    if isinstance(obj, list) or isinstance(obj, tuple):
+        return tuple(convert_lists_to_tuples(item) for item in obj)
+    elif isinstance(obj, dict):
+        return {key: convert_lists_to_tuples(value) for key, value in obj.items()}
+    else:
+        return obj
 
 # algo from here onwards
 def initialize_index(node, index):
@@ -591,6 +606,8 @@ def diff_to_natural_language_recursion(diff,diff_string,link):
                         if q1_diff != '(' and q1_diff != ')':
                             diff_string += q1_diff + ", "
                     diff_string += "while query 2 did not"
+                else:
+                    diff_string += "query 1 did not have relevant differences that query 2 did not have"
                 if len(value['Q2'])> 0:
                     diff_string += " and query 2 had "
                     for q2_diff in value['Q2']:

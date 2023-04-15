@@ -1,3 +1,4 @@
+#Class taken from https://stackoverflow.com/questions/56043767/show-large-image-using-scrollbar-in-python
 import tkinter
 
 class ScrollableImage(tkinter.Frame):
