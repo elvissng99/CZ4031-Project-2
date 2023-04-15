@@ -7,6 +7,7 @@ from pprint import pprint
 
 class Window:
     def __init__(self, master):
+        # Get window dimensions
         self.width = master.winfo_screenwidth()
         self.height = master.winfo_screenheight()
 
@@ -56,9 +57,12 @@ class Window:
             widgets.destroy()
 
     def update_image_frame(self, frame):
+        # Remove current images
         self.clear_frame(frame)
+        # Load new images
         query1 = ImageTk.PhotoImage(Image.open("query1.png").resize((int(self.width/1.5),int(self.height/1.5))))
         query2 = ImageTk.PhotoImage(Image.open("query2.png").resize((int(self.width/1.5),int(self.height/1.5))))
+        # Rebuild frame
         self.query1_label = Label(self.frame_diagram, text="Query 1:").pack(expand=True, fill=BOTH)
         self.image_scroll1 = ScrollableImage(self.frame_diagram, image=query1, scrollbarwidth=20, width=self.width/3, height=self.height/4)
         self.image_scroll1.pack(expand=TRUE, fill=BOTH)
