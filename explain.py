@@ -4,6 +4,10 @@ from collections import deque
 import sqlparse
 from diagrams import Diagram, Node as noode
 from pprint import pprint
+import networkx as nx
+import matplotlib.patches as mpatches
+import matplotlib.pyplot as plt
+import numpy as np
 
 
 #recursively builds itself in a depth first search manner
@@ -51,11 +55,67 @@ def buildQEP(query_result_json):
     return Node(query_result_json)
 
 
-#tree is drawn and then output into image.png
+def binary_tree_layout(G, root, width=1.0, height=1.5, horizontal_gap=0.4):
+    pos = {}
+
+    def _dfs(node, depth, min_order, max_order):
+        if node.index not in pos:
+            pos[node.index] = None
+
+        children = node.children
+        if children:
+            if len(children) == 1:
+                _dfs(children[0], depth + 1, min_order, max_order)
+                pos[node.index] = ((min_order + max_order) / 2.0 * width, -depth * height)
+            else:
+                child_orders = []
+                for i, child in enumerate(children):
+                    child_min_order = min_order + (max_order - min_order) * i / len(children)
+                    child_max_order = min_order + (max_order - min_order) * (i + 1) / len(children)
+                    _dfs(child, depth + 1, child_min_order, child_max_order)
+                    child_orders.append((child_min_order + child_max_order) / 2.0)
+
+                middle_order = sum(child_orders) / len(child_orders)
+                pos[node.index] = (middle_order * width, -depth * height)
+
+                if node.parent and node.parent.parent and len(node.parent.children) == 1 and len(node.parent.parent.children) == 1:
+                    parent_middle_order = (min_order + max_order) / 2.0
+                    pos[node.index] = (parent_middle_order * width, -depth * height)
+        else:
+            pos[node.index] = ((min_order + max_order) / 2.0 * width, -depth * height)
+
+            if node.parent and node.parent.parent and len(node.parent.children) == 1 and len(node.parent.parent.children) == 1:
+                parent_middle_order = (min_order + max_order) / 2.0
+                pos[node.index] = (parent_middle_order * width, -depth * height)
+
+    # increase width based on depth of tree
+    def increase_width(root_node, current_depth=0):
+        if root_node.children:
+            current_depth += 1
+            for child in root_node.children:
+                increase_width(child, current_depth)
+        else:
+            nonlocal width
+            width = max(width, current_depth * 1.5)
+
+    increase_width(root)
+    _dfs(root, 0, 0.0, 1.0)
+
+    for u, v in G.edges():
+        x1, y1 = pos[u]
+        x2, y2 = pos[v]
+        if abs(x1 - x2) > horizontal_gap:
+            pos[u] = (x1 + (x2 - x1) * 0.5, y1)
+
+    return pos
+
+
 def QEP_dfs(root, name):
     diag_nodes = []
     relations = []
     node = root
+    G = nx.DiGraph()
+
     for child in node.children:
         temp_nodes, temp_relations = QEP_dfs(child, name)
         relations.append([node.index, child.index])
@@ -64,10 +124,56 @@ def QEP_dfs(root, name):
     diag_nodes.append([node.node_type, node.index])
     if node.parent is None:
         diag_nodes.sort(key=lambda x: x[1])
-        with Diagram(name='', filename=name, show=False, direction='TB', node_attr={"fontsize":"25"}):
-            nodes_list = [noode(label[0],height = "0.5", width = "3",) for label in diag_nodes]
-            for relation in relations:
-                nodes_list[relation[0]] >> nodes_list[relation[1]]
+
+        # create graph using networkx
+        for label in diag_nodes:
+            G.add_node(label[1], label=label[0])
+
+        for relation in relations:
+            G.add_edge(relation[0], relation[1])
+
+        # set figure size
+        plt.figure(figsize=(10, 6))
+            
+        # draw graph using matplotlib
+        pos = binary_tree_layout(G, root, width=1.0, height=1.0) 
+
+        # wrap nodes with rectangles
+        for node, coords in pos.items():
+            label = G.nodes[node]['label']
+            width = np.clip(len(label) * 0.12, 0.35, 2.0)
+            rect = mpatches.Rectangle((coords[0] - width / 3, coords[1] - 0.20), width / 1.5, 0.40, facecolor="none", edgecolor="black", linewidth=1, alpha=1)
+            plt.gca().add_patch(rect)
+      
+        for u, v in G.edges():
+            x1, y1 = pos[u]
+            x2, y2 = pos[v]
+            arrow_length = 0.8 
+            arrow_start = 0.2  
+            dx = x2 - x1
+            dy = y2 - y1
+            plt.gca().annotate("",
+                            xy=(x1 + arrow_length * dx, y1 + arrow_length * dy),
+                            xytext=(x1 + arrow_start * dx, y1 + arrow_start * dy),
+                            arrowprops=dict(arrowstyle="->", lw=1),
+                            )
+        
+        # adjust label positions
+        label_pos = {node: (coords[0], coords[1] - 0.01) for node, coords in pos.items()}
+        nx.draw_networkx_labels(G, label_pos, labels={node[1]: node[0] for node in diag_nodes}, font_size=10, font_weight='normal')
+
+        x_coords = [coords[0] for _, coords in pos.items()]
+        y_coords = [coords[1] for _, coords in pos.items()]
+        x_min, x_max = min(x_coords), max(x_coords)
+        y_min, y_max = min(y_coords), max(y_coords)
+        padding = 0.7
+        plt.xlim(x_min - padding, x_max + padding)
+        plt.ylim(y_min - padding, y_max + padding)
+
+        # save figure
+        plt.axis("off")
+        plt.savefig(f"{name}.png", format="PNG", bbox_inches="tight")
+        plt.close()
 
     return diag_nodes, relations
 
