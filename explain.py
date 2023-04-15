@@ -326,18 +326,23 @@ def query_difference(q1,q2):
             diff_result[key]=q2[key]
         else:
             diff_result[key]=q1[key]
+    print("Diff_result: ", diff_result)
+    print()
     # reformat the diff_result
     for key,value in diff_result.items():
         if 'subquery' in key:
             new_subquery_format[key] = {}
-            for tup in value:
-                tuple_key = tup[0]
-                tuple_value = list(tup[1])
-                if tuple_key not in new_subquery_format[key]:
-                    new_subquery_format[key][tuple_key] = tuple_value
-                else:
-                    new_subquery_format[key][tuple_key].extend(tuple_value)
+            for subquery in value:
+                for tup in subquery:
+                    tuple_key = tup[0]
+                    tuple_value = list(tup[1])
+                    if tuple_key not in new_subquery_format[key]:
+                        new_subquery_format[key][tuple_key] = tuple_value
+                    else:
+                        new_subquery_format[key][tuple_key].extend(tuple_value)
             diff_result[key] = new_subquery_format[key]
+    print("New format of diff result is:\n", diff_result)
+    print()
     # Using diff_result, we obtain the differences in diff_result and reformat it into final_difference_result
     # With each keyword as key and the values containing a dictionary with Q1 and Q2 as the keys
     for key, value in diff_result.items():
@@ -351,18 +356,20 @@ def query_difference(q1,q2):
                 final_difference_result[key][subquery_key]['Q2'] = []
                 if bool(temp_q1):
                     for item in temp_q1[subquery_from_key]:
-                        if item[0] == subquery_key:
-                            for element1 in diff_result[key][subquery_key]:
-                                for element2 in item[1]:
-                                    if element1 == element2:
-                                        final_difference_result[key][subquery_key]['Q1'].append(element1)
+                        for subitem in item:
+                            if subitem[0] == subquery_key:
+                                for element1 in diff_result[key][subquery_key]:
+                                    for element2 in subitem[1]:
+                                        if element1 == element2:
+                                            final_difference_result[key][subquery_key]['Q1'].append(element1)
                 if bool(temp_q2):
                     for item in temp_q2[subquery_from_key]:
-                        if item[0] == subquery_key:
-                            for element1 in diff_result[key][subquery_key]:
-                                for element2 in item[1]:
-                                    if element1 == element2:
-                                        final_difference_result[key][subquery_key]['Q2'].append(element1)
+                        for subitem in item:
+                            if subitem[0] == subquery_key:
+                                for element1 in diff_result[key][subquery_key]:
+                                    for element2 in subitem[1]:
+                                        if element1 == element2:
+                                            final_difference_result[key][subquery_key]['Q2'].append(element1)
         else:
             final_difference_result[key]['Q1'] = []
             final_difference_result[key]['Q2'] = []
@@ -383,9 +390,14 @@ def get_subquery_info(query,key,temp_query):
     for value in query[key]:
         if isinstance(value,dict):
             new_key = '{}_subquery'.format(key)
-            query[new_key] = [(key, [value[0]] if len(value)==1 else list(value)) for key, value in value.items()]
+            new_list = [(key, [value[0]] if len(value)==1 else list(value)) for key, value in value.items()]
+            if query.get(new_key) is None:
+                query[new_key] = []
+                query[new_key].append(new_list)
+            if query.get(new_key) is not None:
+                if new_list not in query[new_key]:
+                    query[new_key].append(new_list)
             query[key].remove(value)
-            # store the new value into a temp query with the original key
             temp_query[key] = query[new_key]
 
 def convert_lists_to_tuples(obj):
