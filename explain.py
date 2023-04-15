@@ -114,20 +114,25 @@ def QEP_dfs(root, name):
     relations = []
     node = root
     G = nx.DiGraph()
-
+    
+    # Traverse the query and take note of nodes and the relation between each node
     for child in node.children:
         temp_nodes, temp_relations = QEP_dfs(child, name)
         relations.append([node.index, child.index])
         relations.extend(temp_relations)
         diag_nodes.extend(temp_nodes)
     diag_nodes.append([node.node_type, node.index])
+    
+    # If node is root node start drawing
     if node.parent is None:
+        # Sort node base on index
         diag_nodes.sort(key=lambda x: x[1])
 
         # create graph using networkx
         for label in diag_nodes:
             G.add_node(label[1], label=label[0])
-
+        
+        # Create connections based on node relations
         for relation in relations:
             G.add_edge(relation[0], relation[1])
 
