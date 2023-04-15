@@ -2,7 +2,6 @@ import tkinter as tk
 from tkinter import *
 from PIL import Image, ImageTk
 from explain import *
-from scrollable import ScrollableImage
 from pprint import pprint
 
 class Window:
@@ -138,7 +137,34 @@ class Window:
         # Update GUI
         self.update_image_frame(self.frame_diagram)
         self.update_output(sql_text, qep_text)
-
+        
+        
+# Widget for scrollable images
+class ScrollableImage(tk.Frame):
+    def __init__(self, master=None, **kw):
+        # Set image
+        self.image = kw.pop('image', None)
+        # Set scrollbar width
+        sw = kw.pop('scrollbarwidth', 20)
+        super(ScrollableImage, self).__init__(master=master, **kw)
+        self.cnvs = Canvas(self, highlightthickness=0, **kw)
+        self.cnvs.create_image(0, 0, anchor='nw', image=self.image)
+        # Vertical and Horizontal scrollbars
+        self.v_scroll = Scrollbar(self, orient='vertical', width=sw)
+        self.h_scroll = Scrollbar(self, orient='horizontal', width=sw)
+        # Grid and configure weight.
+        self.cnvs.grid(row=0, column=0,  sticky='nsew')
+        self.h_scroll.grid(row=1, column=0, sticky='ew')
+        self.v_scroll.grid(row=0, column=1, sticky='ns')
+        self.rowconfigure(0, weight=1)
+        self.columnconfigure(0, weight=1)
+        # Set the scrollbars to the canvas
+        self.cnvs.config(xscrollcommand=self.h_scroll.set, yscrollcommand=self.v_scroll.set)
+        # Set canvas view to the scrollbars
+        self.v_scroll.config(command=self.cnvs.yview)
+        self.h_scroll.config(command=self.cnvs.xview)
+        # Assign the region to be scrolled
+        self.cnvs.config(scrollregion=self.cnvs.bbox('all'))
 
 
 if __name__ == "__main__":
