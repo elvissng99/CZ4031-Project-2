@@ -305,7 +305,7 @@ def iterate_parsedSQL(parsed):
 #                 repeat = True
 #                 break
 
-#find difference between sql queries by separing what query 1 has that query 2 does not and vice versa
+# find difference between sql queries by identifying what is in query 1 and 2
 def query_difference(q1,q2):
     temp_q1={}
     temp_q2={}
@@ -315,57 +315,46 @@ def query_difference(q1,q2):
     q1_set = set(q1.keys())
     q2_set = set(q2.keys())
     all_keys = q1_set.union(q2_set)
+    # check if any key in each query contains a subquery
     for key in all_keys:
         if q1.get(key) is not None and q2.get(key) is not None:
             get_subquery_info(q1,key,temp_q1)
             get_subquery_info(q2,key,temp_q2)
+    # retrieve all the keys in Q1 and Q2
     updated_all_keys = set(q1.keys()).union(set(q2.keys()))
-    # print("Updated Keys: {}".format(updated_all_keys))
+    # get all the differences in Q1 and Q2
     for key in updated_all_keys:
         if q1.get(key) is not None and q2.get(key) is not None:
-            # diff = set(q1[key]).symmetric_difference(set(q2[key]))
-            # print("key is", key)
-            # print("q1 key")
-            # pprint(q1[key])
-            # print("q2 key")
-            # pprint(q2[key])
             diff = set(convert_lists_to_tuples(q1[key])).symmetric_difference(set(convert_lists_to_tuples(q2[key])))
-            # print("diff")
-            # print(list(diff))
             if diff:
                 diff_result[key] = list(diff)
         elif q1.get(key) is None:
             diff_result[key]=q2[key]
         else:
             diff_result[key]=q1[key]
+    # reformat the diff_result
     for key,value in diff_result.items():
         if 'subquery' in key:
-            # print("key with subquery: ", key)
             new_subquery_format[key] = {}
             for tup in value:
-                # print("Tuple: ", tup)
                 tuple_key = tup[0]
                 tuple_value = list(tup[1])
                 if tuple_key not in new_subquery_format[key]:
                     new_subquery_format[key][tuple_key] = tuple_value
                 else:
                     new_subquery_format[key][tuple_key].extend(tuple_value)
-                 
             diff_result[key] = new_subquery_format[key]
-    # print("New format of diff result is:\n", diff_result)
-    # print("subquery: ", diff_result['from_subquery'])
+    # Using diff_result, we obtain the differences in diff_result and reformat it into final_difference_result
+    # With each keyword as key and the values containing a dictionary with Q1 and Q2 as the keys
     for key, value in diff_result.items():
         final_difference_result[key] = {}
+        # to handle those keys that have a subquery
         if 'subquery' in key:
-            # print("key with subquery: ", key)
             subquery_from_key = key.split('_')[0]
-            # print()
-            # print("subquery from key: ",subquery_from_key)
             for subquery_key, subquery_value in diff_result[key].items():
                 final_difference_result[key][subquery_key] = {}
                 final_difference_result[key][subquery_key]['Q1'] = []
                 final_difference_result[key][subquery_key]['Q2'] = []
-                # print(subquery_key, ":", subquery_value)
                 if bool(temp_q1):
                     for item in temp_q1[subquery_from_key]:
                         if item[0] == subquery_key:
@@ -380,9 +369,6 @@ def query_difference(q1,q2):
                                 for element2 in item[1]:
                                     if element1 == element2:
                                         final_difference_result[key][subquery_key]['Q2'].append(element1)
-                            # for element in diff_result[key][subquery_key]:
-                            #     if item[1] == element:
-                            #         final_difference_result[key][subquery_key]['Q2'].append(element)
         else:
             final_difference_result[key]['Q1'] = []
             final_difference_result[key]['Q2'] = []
@@ -396,24 +382,17 @@ def query_difference(q1,q2):
                 for element in value:
                     final_difference_result[key]['Q2'].append(element)
     
-    # print()
-    # print("Final Difference Result:")        
-    # print(final_difference_result)
-    
     return final_difference_result
 
-#formatting subqueries found in the query
+# formatting subqueries found in the query
 def get_subquery_info(query,key,temp_query):
     for value in query[key]:
         if isinstance(value,dict):
             new_key = '{}_subquery'.format(key)
             query[new_key] = [(key, [value[0]] if len(value)==1 else list(value)) for key, value in value.items()]
             query[key].remove(value)
+            # store the new value into a temp query with the original key
             temp_query[key] = query[new_key]
-            # print("New: {}".format(query[new_key]))
-            # print()
-            # print("Temp: {}".format(temp_query[key]))
-            # print()
 
 def convert_lists_to_tuples(obj):
     if isinstance(obj, list) or isinstance(obj, tuple):
