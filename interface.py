@@ -138,7 +138,8 @@ class Window:
         self.update_image_frame(self.frame_diagram)
         self.update_output(sql_text, qep_text)
         
-        
+
+# https://stackoverflow.com/questions/56043767/show-large-image-using-scrollbar-in-python
 # Widget for scrollable images
 class ScrollableImage(tk.Frame):
     def __init__(self, master=None, **kw):
