@@ -50,6 +50,19 @@ def buildQEP(query_result_json):
 
 
 def binary_tree_layout(G, root, width=1.0, height=1.5, horizontal_gap=0.4):
+    """ 
+    Custom binary tree layout function using depth-first search algorithm.
+
+    Input parameters:
+        G: Input tree to be visualized
+        root: Root node of the input tree
+        width: Width of layout
+        height: Height of layout
+        horizontal_gap: Horizontal gap between nodes
+
+    Return parameters: 
+        pos: Position dictionary for nodes according to depth and order in the tree. 
+    """
     pos = {}
 
     def _dfs(node, depth, min_order, max_order):
@@ -105,6 +118,17 @@ def binary_tree_layout(G, root, width=1.0, height=1.5, horizontal_gap=0.4):
 
 
 def QEP_dfs(root, name):
+    """
+        Custom implementation for visualizing a QEP.
+        
+        Input parameters:
+            root: Root node of tree structure the models the QEP
+            name: String parameter that specifies name of output image
+
+        Return parameters:
+            diag_nodes: List of nodes in the graph
+            relations: List of relationships between the nodes in the graph
+    """
     diag_nodes = []
     relations = []
     node = root
