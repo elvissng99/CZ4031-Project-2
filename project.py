@@ -4,52 +4,40 @@ from pprint import pprint
 q1 = '''
 set max_parallel_workers_per_gather =0;
 EXPLAIN (VERBOSE, ANALYZE, FORMAT JSON)
-SELECT
-    o.o_orderpriority,
-    SUM(l.l_quantity * l.l_extendedprice) AS revenue
-FROM
-    orders o
-    JOIN lineitem l ON o.o_orderkey = l.l_orderkey
-WHERE
-    o.o_orderdate >= '1994-01-01'
-    AND o.o_orderdate < '1995-01-01'
-GROUP BY
-    o.o_orderpriority
-HAVING
-    SUM(l.l_quantity * l.l_extendedprice) > (
-        SELECT
-            SUM(sub_l.l_quantity * sub_l.l_extendedprice) AS sub_revenue
-        FROM
-            lineitem sub_l
-            JOIN orders sub_o ON sub_l.l_orderkey = sub_o.o_orderkey
-        WHERE
-            sub_o.o_orderdate >= '1994-01-01'
-            AND sub_o.o_orderdate < '1995-01-01'
-    )
-ORDER BY
-    revenue DESC,
-    o.o_orderpriority;
+select c_name, c_mktsegment, c_acctbal, o_totalprice
+from customer, orders
+where c_acctbal > 1000
+and o_totalprice >100000
+and customer.c_custkey = orders.o_orderkey
+group by c_name,c_mktsegment, c_acctbal, o_totalprice;
 '''
 
 q2 = ''' 
 set max_parallel_workers_per_gather =0;
 EXPLAIN (VERBOSE, ANALYZE, FORMAT JSON)
-SELECT
-    o.o_orderpriority,
-    SUM(l.l_quantity * l.l_extendedprice) AS revenue
-FROM
-    orders o
-    JOIN lineitem l ON o.o_orderkey = l.l_orderkey
-WHERE
-    o.o_orderdate >= '1994-01-01'
-    AND o.o_orderdate < '1995-01-01'
-GROUP BY
-    o.o_orderpriority
-HAVING
-    SUM(l.l_quantity * l.l_extendedprice) > 1000
-ORDER BY
-    revenue DESC,
-    o.o_orderpriority;
+select
+      l_orderkey, 
+      sum(l_extendedprice * (1 - l_discount)) as revenue,
+	    AVG(l_extendedprice) as average_price,
+      o_orderdate,
+      o_shippriority
+    from
+      customer,
+      orders,
+      lineitem
+    where
+      c_mktsegment = 'AUTOMOBILE'
+      and c_custkey = o_custkey
+      and l_orderkey = o_orderkey
+      and o_totalprice > 10
+      and l_extendedprice > 10
+      and l_quantity > 20
+    group by
+      l_orderkey,
+      o_orderdate,
+      o_shippriority
+    order by
+      o_orderdate;
 '''
 q1 = q1.lower()
 q2 = q2.lower()
