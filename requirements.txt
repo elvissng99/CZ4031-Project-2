@@ -6,3 +6,5 @@ Pillow==9.4.0
 psycopg2==2.9.5
 sqlparse==0.4.3
 typed-ast==1.5.4
+matplotlib==3.6.0
+numpy==1.23.3

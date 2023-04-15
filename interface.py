@@ -7,6 +7,7 @@ from pprint import pprint
 
 class Window:
     def __init__(self, master):
+        # Get window dimensions
         self.width = master.winfo_screenwidth()
         self.height = master.winfo_screenheight()
 
@@ -56,9 +57,12 @@ class Window:
             widgets.destroy()
 
     def update_image_frame(self, frame):
+        # Remove current images
         self.clear_frame(frame)
+        # Load new images
         query1 = ImageTk.PhotoImage(Image.open("query1.png").resize((int(self.width/1.5),int(self.height/1.5))))
         query2 = ImageTk.PhotoImage(Image.open("query2.png").resize((int(self.width/1.5),int(self.height/1.5))))
+        # Rebuild frame
         self.query1_label = Label(self.frame_diagram, text="Query 1:").pack(expand=True, fill=BOTH)
         self.image_scroll1 = ScrollableImage(self.frame_diagram, image=query1, scrollbarwidth=20, width=self.width/3, height=self.height/4)
         self.image_scroll1.pack(expand=TRUE, fill=BOTH)
@@ -89,15 +93,29 @@ class Window:
         entry2 = entry2.lower()
         return entry1, entry2
 
-    def run(self):
+     def run(self):
+        # Check if input is empty
+        if len(self.entry1.get("1.0", END)) == 1 or len(self.entry2.get("1.0", END)) == 1:
+            self.update_output("Please fill in both Query 1 and Query 2", "Please fill in both Query 1 and Query 2")
+            return
+
         # Get input
         entry1, entry2 = self.get_input()
-        #entry1, entry2 = q1, q2
 
         # Create QEP
         connection = connect_db()
-        q1_root = buildQEP(execute_json(connection, entry1))
-        q2_root = buildQEP(execute_json(connection, entry2))
+        try:
+            q1_root = buildQEP(execute_json(connection, entry1))
+        except:
+            self.update_output("There are errors in Query 1. Please try again",
+                               "There are errors in Query 1. Please try again")
+            return
+        try:
+            q2_root = buildQEP(execute_json(connection, entry2))
+        except:
+            self.update_output("There are errors in Query 2. Please try again",
+                               "There are errors in Query 2. Please try again")
+            return
 
         # find sql query differences
         query_diff = query_difference(parseSQL(entry1), parseSQL(entry2))
@@ -122,8 +140,10 @@ class Window:
         self.update_output(sql_text, qep_text)
 
 
+
 if __name__ == "__main__":
     root = Tk()
-
+    root.title("Query Descriptor ")
+    root.state("zoomed")
     window = Window(root)
     root.mainloop()
