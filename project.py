@@ -34,27 +34,22 @@ ORDER BY
 q2 = ''' 
 set max_parallel_workers_per_gather =0;
 EXPLAIN (VERBOSE, ANALYZE, FORMAT JSON)
-select
-      o_orderpriority,
-      count(*) as order_count
-    from
-      orders
-    where
-      o_totalprice > 100
-      and exists (
-  select
-    c_name
-  from 
-    customer 
-  where
-    c_acctbal > 1000
-      )
-    group by
-      o_orderpriority
-    order by
-      o_orderpriority;
-
-
+SELECT
+    o.o_orderpriority,
+    SUM(l.l_quantity * l.l_extendedprice) AS revenue
+FROM
+    orders o
+    JOIN lineitem l ON o.o_orderkey = l.l_orderkey
+WHERE
+    o.o_orderdate >= '1994-01-01'
+    AND o.o_orderdate < '1995-01-01'
+GROUP BY
+    o.o_orderpriority
+HAVING
+    SUM(l.l_quantity * l.l_extendedprice) > 1000
+ORDER BY
+    revenue DESC,
+    o.o_orderpriority;
 '''
 q1 = q1.lower()
 q2 = q2.lower()
@@ -75,6 +70,7 @@ print()
 pprint(q2_parsed)
 #find sql query differences
 query_diff = query_difference(q1_parsed, q2_parsed)
+pprint(query_diff)
 query_diff_natural_language = sql_diff_to_natural_language(query_diff)
 
 #algo to find the sequential changes to convert QEP1 into QEP2
