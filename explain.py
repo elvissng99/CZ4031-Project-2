@@ -37,12 +37,7 @@ def connect_db():
         password= default['DB_PASSWORD']
         )
 
-def helper_function(connection, string_query):
-    cursor = connection.cursor()
-    cursor.execute(string_query)
-    records = cursor.fetchall()
-    print(records[0][0][0])
-
+#executes the query and returns the QEP in json format
 def execute_json(connection, query):
     cursor = connection.cursor()
     cursor.execute(query)
@@ -196,12 +191,12 @@ def QEP_bfs(root):
             currentLevelNodes = nextLevelNodes
             nextLevelNodes = 0
 
-#parse SQL into a usable format
+#parse SQL into a suitable format
 def parseSQL(query):
     parsed = sqlparse.parse(query)[1]
-    # print(parsed)
     return iterate_parsedSQL(parsed)
-    
+
+#parse SQL into a suitable format
 def iterate_parsedSQL(parsed):
     keyword = 'list'
     excluded_keywords = ["and","or","not","between","in","exists", "as"]
@@ -212,7 +207,6 @@ def iterate_parsedSQL(parsed):
     for e in parsed.tokens:
         if(not e.is_whitespace and e.value != ","):    
             if(e.is_keyword):
-                # print(1,e.value)
                 if(e.value not in excluded_keywords):
                     keyword = e.value
                     result[keyword] = []
@@ -225,15 +219,12 @@ def iterate_parsedSQL(parsed):
                     if(keyword == 'order by'):
                         if isinstance(e,sqlparse.sql.Identifier):
                             temp.append(e.get_name() +" " + ("ASC" if e.get_ordering() == None else e.get_ordering()))
-                            # print(e.get_name(), "ASC" if e.get_ordering() == None else e.get_ordering())
                         else:
                             for item in e.get_identifiers():
-                                # print(item.get_name(), "ASC" if item.get_ordering() == None else item.get_ordering())
                                 string = item.get_name() + " " +("ASC" if item.get_ordering() == None else item.get_ordering())
                                 temp.append(string)
                     else:
                         sub_result = iterate_parsedSQL(e)
-                        # print("sub for identifier/identifierlist",sub_result)
                         temp.extend(sub_result['list'])
                 elif isinstance(e,sqlparse.sql.Comparison):
                     is_subquery = False
@@ -255,7 +246,6 @@ def iterate_parsedSQL(parsed):
                                     result['where'] = sub_result['where']
                             elif(not checkToken.is_whitespace and checkToken.value != ","):
                                 temp.append(checkToken.value)
-                    # print(2,e)
                 elif isinstance(e,sqlparse.sql.Parenthesis) or isinstance(e,sqlparse.sql.Where):
                     sub_result = iterate_parsedSQL(e)
                     if(len(sub_result['list'])> 0):
@@ -266,10 +256,8 @@ def iterate_parsedSQL(parsed):
                         result['where'] = sub_result['where']
                 else:
                     temp.append(e.value)
-                    # print(3,e)
             else:
                 if(e.value ==';'):
-                    # print("END")
                     pass
                 else:
                     
@@ -280,32 +268,9 @@ def iterate_parsedSQL(parsed):
                         result[bracket_keyword].append(e.value)
                     else:
                         temp.append(e.value)
-                    # print(4,e)
-    # if 'where' in result:
-    #     if 'exists' in result['where']:
-    #         reformat_WHERE_subquery(result,'exists')
-    #     elif 'in' in result['where']:
-    #         reformat_WHERE_subquery(result,'in')
     return result
 
-# def reformat_WHERE_subquery(result,key):
-#     repeat = True
-#     while(repeat):
-#         repeat = False
-#         for k,v in enumerate(result['where']):
-#             if v == key:
-#                 if(result['where'][k-1] == 'not'):
-#                     key = 'not '+key
-#                     k -=1
-#                     result['where'].pop(k) 
-#                 result['where'][k] = {key:result['where'][k+3]}
-#                 result['where'].pop(k+1)
-#                 result['where'].pop(k+1)
-#                 result['where'].pop(k+1)
-#                 repeat = True
-#                 break
-
-#find difference between sql queries by separing what query 1 has that query 2 does not and vice versa
+#find difference between sql queries by separating what query 1 has that query 2 does not and vice versa
 def query_difference(q1,q2):
     temp_q1={}
     temp_q2={}
@@ -552,7 +517,7 @@ def form_output_string(diff):
         outputstr = " with boolean output."
     return outputstr
 
-#returns the list of strings that contains the differences in natural language
+#returns the list of strings that contains the reasons for the change in QEP in natural language
 def diff_to_natural_language(qep_diff,query_diff):
     result = []
     for diff in qep_diff:
@@ -560,14 +525,11 @@ def diff_to_natural_language(qep_diff,query_diff):
             if "Update" in diff:                
                 link = qep_diff_link_to_query_diff(diff[6],query_diff)
                 diff_string = diff[6].node_type + form_output_string(diff[6]) + " changed to "+ diff[7].node_type + form_output_string(diff[7])
-                # pprint(link)
             elif "Delete" in diff:
                 link = qep_diff_link_to_query_diff(diff[3],query_diff)
-                # pprint(link)
                 diff_string = diff[3].node_type + form_output_string(diff[3]) +  " was removed."
             elif "Insert" in diff:
                 link = qep_diff_link_to_query_diff(diff[3],query_diff)
-                # pprint(link)
                 diff_string = diff[3].node_type + form_output_string(diff[3]) + " was added."
             else:
                 print("SHOULD NOT HAPPEN")
@@ -593,7 +555,6 @@ def diff_to_natural_language(qep_diff,query_diff):
                     if reason not in diff[6].reasons:
                         diff[6].reasons.append(reason)
     return result
-
 #return a string that contains the differences in natural langauge for a particular node change in QEP 1 to transform into QEP 2
 def diff_to_natural_language_recursion(diff,diff_string,link):
     for key, value in link.items():
@@ -625,7 +586,7 @@ def diff_to_natural_language_recursion(diff,diff_string,link):
 
 #finds relevant links/reasons as to why there is a node change in QEP 1 to transform into QEP 2
 #this is based on either the current node's child nodes which had differences
-#or the current node's output changes in QEP 1 as compared to QEP 2
+#or the current node's output changes in QEP 1 as compared to query differences
 def qep_diff_link_to_query_diff(diff,query_diff):
     result = {}
     if diff.node_type == "Sort":
@@ -662,7 +623,7 @@ def qep_diff_link_to_query_diff(diff,query_diff):
                                 diff.reasons.append('group by')
                             if difference not in result['group by'][q]:
                                 result['group by'][q].append(difference)
-                        
+    #find reasons in child nodes         
     if len(diff.children) !=0:
         for child in diff.children:
             if len(child.reasons)>0:
@@ -674,6 +635,7 @@ def qep_diff_link_to_query_diff(diff,query_diff):
                     if reason not in result['previous']:
                         result['previous'].append(reason)
 
+    #find reasons from current node's output changes in QEP 1 as compared to query differences
     if 'previous' not in result:
         for keyword, differences_q1q2_dict in query_diff.items():
             if 'list' != keyword:
